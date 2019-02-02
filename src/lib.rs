@@ -69,6 +69,8 @@ fn make_cananical_request_str(request: &Request<String>) -> String {
     let mut res: String = "".to_owned();
     res.push_str(request.method().as_str());
     res.push('\n');
+    res.push_str(request.uri().path());
+    res.push('\n');
     res
 }
 
@@ -105,9 +107,19 @@ mod tests {
 
     #[test]
     fn test_make_cananical_request_str() {
-        let req1 = Request::builder().method("GET").body("".to_string()).unwrap();
-        assert_eq!(make_cananical_request_str(&req1), "GET\n");
-        let req2 = Request::builder().method("POST").body("".to_string()).unwrap();
-        assert_eq!(make_cananical_request_str(&req2), "POST\n");
+        let req = Request::builder().method("GET").body("".to_string()).unwrap();
+        assert_eq!(make_cananical_request_str(&req), "GET\n/\n");
+        let req = Request::builder().method("POST").body("".to_string()).unwrap();
+        assert_eq!(make_cananical_request_str(&req), "POST\n/\n");
+        let req = Request::builder().method("GET").uri("/helloworld").body("".to_string()).unwrap();
+        assert_eq!(make_cananical_request_str(&req), "GET\n/helloworld\n");
+        let req = Request::builder().method("GET").uri("/hello%20world").body("".to_string()).unwrap();
+        assert_eq!(make_cananical_request_str(&req), "GET\n/hello%20world\n");
+        let req = Request::builder().method("GET").uri("/Hello%20world").body("".to_string()).unwrap();
+        assert_eq!(make_cananical_request_str(&req), "GET\n/Hello%20world\n");
+        let req = Request::builder().method("GET").uri("/Hello%20world?").body("".to_string()).unwrap();
+        assert_eq!(make_cananical_request_str(&req), "GET\n/Hello%20world\n");
+        let req = Request::builder().method("GET").uri("/Hello%20world?a=1").body("".to_string()).unwrap();
+        assert_eq!(make_cananical_request_str(&req), "GET\n/Hello%20world\n");
     }
 }
