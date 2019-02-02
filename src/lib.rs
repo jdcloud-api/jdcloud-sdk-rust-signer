@@ -2,6 +2,7 @@ extern crate http;
 extern crate crypto;
 extern crate chrono;
 extern crate uuid;
+extern crate url;
 
 mod credential;
 
@@ -12,6 +13,7 @@ use http::Request;
 use http::header::HeaderValue;
 use chrono::prelude::*;
 use uuid::Uuid;
+use url::percent_encoding::{utf8_percent_encode, EncodeSet};
 
 static EMPTY_STRING_SHA256: &str = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
 static LONG_DATE_FORMAT_STR: &str = "%Y%m%dT%H%M%SZ";
@@ -71,7 +73,58 @@ fn make_cananical_request_str(request: &Request<String>) -> String {
     res.push('\n');
     res.push_str(request.uri().path());
     res.push('\n');
+    res.push_str(&make_cananical_query_str(request));
+    res.push('\n');
     res
+}
+
+fn make_cananical_query_str(request: &Request<String>) -> String {
+    let query = request.uri().query();
+    let query = match query {
+        None => "",
+        Some(q) => q
+    };
+    let query = url::form_urlencoded::parse(query.as_bytes());
+    let mut vec = Vec::new();
+    for q in query {
+        vec.push((q.0.to_string(), q.1.to_string()));
+    }
+    vec.sort_by(|a, b| {
+        if a.0 == b.0 {
+            a.1.partial_cmp(&b.1).unwrap()
+        } else {
+            a.0.partial_cmp(&b.0).unwrap()
+        }
+    });
+    // vec.sort
+    let mut res: String = "".to_owned();
+    let mut first = true;
+    for x in vec {
+        if !first {
+            res.push('&');
+        }
+        first = false;
+        res.push_str(&utf8_percent_encode(&x.0, Aws4QueryItemEncodeSet).to_string());
+        res.push('=');
+        res.push_str(&utf8_percent_encode(&x.1, Aws4QueryItemEncodeSet).to_string());
+    }
+    res
+}
+
+#[derive(Copy, Clone, Debug)]
+struct Aws4QueryItemEncodeSet;
+
+impl EncodeSet for Aws4QueryItemEncodeSet {
+    #[inline]
+    fn contains(&self, c: u8) -> bool {
+        !(('A' as u8 <= c && c <= 'Z' as u8)
+            || ('a' as u8 <= c && c <= 'z' as u8)
+            || ('0' as u8 <= c && c <= '9' as u8)
+            || c == '-' as u8
+            || c == '_' as u8
+            || c == '.' as u8
+            || c == '~' as u8)
+    }    
 }
 
 #[cfg(test)]
@@ -108,18 +161,40 @@ mod tests {
     #[test]
     fn test_make_cananical_request_str() {
         let req = Request::builder().method("GET").body("".to_string()).unwrap();
-        assert_eq!(make_cananical_request_str(&req), "GET\n/\n");
+        assert_eq!(make_cananical_request_str(&req), "GET\n/\n\n");
         let req = Request::builder().method("POST").body("".to_string()).unwrap();
-        assert_eq!(make_cananical_request_str(&req), "POST\n/\n");
+        assert_eq!(make_cananical_request_str(&req), "POST\n/\n\n");
         let req = Request::builder().method("GET").uri("/helloworld").body("".to_string()).unwrap();
-        assert_eq!(make_cananical_request_str(&req), "GET\n/helloworld\n");
+        assert_eq!(make_cananical_request_str(&req), "GET\n/helloworld\n\n");
         let req = Request::builder().method("GET").uri("/hello%20world").body("".to_string()).unwrap();
-        assert_eq!(make_cananical_request_str(&req), "GET\n/hello%20world\n");
+        assert_eq!(make_cananical_request_str(&req), "GET\n/hello%20world\n\n");
         let req = Request::builder().method("GET").uri("/Hello%20world").body("".to_string()).unwrap();
-        assert_eq!(make_cananical_request_str(&req), "GET\n/Hello%20world\n");
+        assert_eq!(make_cananical_request_str(&req), "GET\n/Hello%20world\n\n");
         let req = Request::builder().method("GET").uri("/Hello%20world?").body("".to_string()).unwrap();
-        assert_eq!(make_cananical_request_str(&req), "GET\n/Hello%20world\n");
+        assert_eq!(make_cananical_request_str(&req), "GET\n/Hello%20world\n\n");
         let req = Request::builder().method("GET").uri("/Hello%20world?a=1").body("".to_string()).unwrap();
-        assert_eq!(make_cananical_request_str(&req), "GET\n/Hello%20world\n");
+        assert_eq!(make_cananical_request_str(&req), "GET\n/Hello%20world\na=1\n");
+    }
+
+    #[test]
+    fn test_make_cananical_query_str() {
+        let req = Request::builder().method("GET").uri("/?a=1").body("".to_string()).unwrap();
+        assert_eq!(make_cananical_query_str(&req), "a=1");
+        let req = Request::builder().method("GET").uri("/?a=1#bcd").body("".to_string()).unwrap();
+        assert_eq!(make_cananical_query_str(&req), "a=1");
+        let req = Request::builder().method("GET").uri("/?a=1&b=1").body("".to_string()).unwrap();
+        assert_eq!(make_cananical_query_str(&req), "a=1&b=1");
+        let req = Request::builder().method("GET").uri("/?a&b").body("".to_string()).unwrap();
+        assert_eq!(make_cananical_query_str(&req), "a=&b=");
+        let req = Request::builder().method("GET").uri("/?a=&b=").body("".to_string()).unwrap();
+        assert_eq!(make_cananical_query_str(&req), "a=&b=");
+        let req = Request::builder().method("GET").uri("/?a=&b").body("".to_string()).unwrap();
+        assert_eq!(make_cananical_query_str(&req), "a=&b=");
+        let req = Request::builder().method("GET").uri("/?a&b=").body("".to_string()).unwrap();
+        assert_eq!(make_cananical_query_str(&req), "a=&b=");
+        let req = Request::builder().method("GET").uri("/?b&a").body("".to_string()).unwrap();
+        assert_eq!(make_cananical_query_str(&req), "a=&b=");
+        let req = Request::builder().method("GET").uri("/?b&a=%e4%b8%ad").body("".to_string()).unwrap();
+        assert_eq!(make_cananical_query_str(&req), "a=%E4%B8%AD&b=");
     }
 }

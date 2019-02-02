@@ -8,4 +8,5 @@ edition = "2018"
 http = "0.1.15"
 rust-crypto = "^0.2"
 chrono = "0.4"
+url = "1.7.2"
 uuid = { version = "0.7", features = ["v4"] }
