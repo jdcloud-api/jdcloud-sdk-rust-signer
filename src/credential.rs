@@ -30,8 +30,8 @@ mod tests {
     #[test]
     fn test_is_valid() {
         assert!(Credential::new("a".to_string(), "b".to_string()).is_valid());
-        assert!(Credential::new("a".to_string(), "".to_string()).is_valid());
-        assert!(Credential::new("".to_string(), "b".to_string()).is_valid());
-        assert!(Credential::new("".to_string(), "".to_string()).is_valid());
+        assert!(!Credential::new("a".to_string(), "".to_string()).is_valid());
+        assert!(!Credential::new("".to_string(), "b".to_string()).is_valid());
+        assert!(!Credential::new("".to_string(), "".to_string()).is_valid());
     }
 }
