@@ -96,7 +96,6 @@ fn make_cananical_query_str(request: &Request<String>) -> String {
             a.0.partial_cmp(&b.0).unwrap()
         }
     });
-    // vec.sort
     let mut res: String = "".to_owned();
     let mut first = true;
     for x in vec {
@@ -178,23 +177,38 @@ mod tests {
 
     #[test]
     fn test_make_cananical_query_str() {
-        let req = Request::builder().method("GET").uri("/?a=1").body("".to_string()).unwrap();
-        assert_eq!(make_cananical_query_str(&req), "a=1");
-        let req = Request::builder().method("GET").uri("/?a=1#bcd").body("".to_string()).unwrap();
-        assert_eq!(make_cananical_query_str(&req), "a=1");
-        let req = Request::builder().method("GET").uri("/?a=1&b=1").body("".to_string()).unwrap();
-        assert_eq!(make_cananical_query_str(&req), "a=1&b=1");
-        let req = Request::builder().method("GET").uri("/?a&b").body("".to_string()).unwrap();
-        assert_eq!(make_cananical_query_str(&req), "a=&b=");
-        let req = Request::builder().method("GET").uri("/?a=&b=").body("".to_string()).unwrap();
-        assert_eq!(make_cananical_query_str(&req), "a=&b=");
-        let req = Request::builder().method("GET").uri("/?a=&b").body("".to_string()).unwrap();
-        assert_eq!(make_cananical_query_str(&req), "a=&b=");
-        let req = Request::builder().method("GET").uri("/?a&b=").body("".to_string()).unwrap();
-        assert_eq!(make_cananical_query_str(&req), "a=&b=");
-        let req = Request::builder().method("GET").uri("/?b&a").body("".to_string()).unwrap();
-        assert_eq!(make_cananical_query_str(&req), "a=&b=");
-        let req = Request::builder().method("GET").uri("/?b&a=%e4%b8%ad").body("".to_string()).unwrap();
-        assert_eq!(make_cananical_query_str(&req), "a=%E4%B8%AD&b=");
+        let req = Request::builder().method("GET").body("".to_string()).unwrap();
+        assert_eq!(make_cananical_query_str(&req), "");
+        let testcases = vec![
+            ("/", ""),
+            ("/?", ""),
+            ("/?a=1", "a=1"),
+            ("/?a=1#bcd", "a=1"),
+            ("/?a=1&b=1", "a=1&b=1"),
+            ("/?a&b", "a=&b="), 
+            ("/?a=&b", "a=&b="), 
+            ("/?a&b=", "a=&b="), 
+            ("/?a=&b=", "a=&b="), 
+            ("/?b&a", "a=&b="),  
+            ("/?a=-_.~", "a=-_.~"),
+            ("/?a=/", "a=%2F"),
+            ("/?a=%", "a=%25"),
+            ("/?a=%2", "a=%252"),
+            ("/?a=%00", "a=%00"),
+            ("/?a=%ff", "a=%EF%BF%BD"),
+            ("/?a=%0g", "a=%250g"),
+            ("/?a=%fg", "a=%25fg"),
+            ("/?b&a=%e4%b8%ad", "a=%E4%B8%AD&b="),
+            ("/?b&a=%e4%b8", "a=%EF%BF%BD&b="),
+            ("/?b&a=%2f%25%20", "a=%2F%25%20&b="),
+            ("/?b&a=%2f%25%20", "a=%2F%25%20&b="),
+            ("/?b&a=+++", "a=%20%20%20&b="),
+            ("/?a=2&a=1", "a=1&a=2"),
+            ("/?a=1&a=1", "a=1&a=1"),
+        ];
+        for tc in testcases {
+            let req = Request::builder().method("GET").uri(tc.0).body("".to_string()).unwrap();
+            assert_eq!(make_cananical_query_str(&req), tc.1);
+        }
     }
 }
