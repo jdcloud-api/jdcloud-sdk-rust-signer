@@ -1,6 +1,7 @@
 extern crate http;
 extern crate crypto;
 extern crate chrono;
+extern crate uuid;
 
 mod credential;
 
@@ -10,6 +11,7 @@ use crate::credential::Credential;
 use http::Request;
 use http::header::HeaderValue;
 use chrono::prelude::*;
+use uuid::Uuid;
 
 static EMPTY_STRING_SHA256: &str = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
 static LONG_DATE_FORMAT_STR: &str = "%Y%m%dT%H%M%SZ";
@@ -41,7 +43,7 @@ impl JdcloudSigner {
 
         let mut res = Request::builder();
         res.header(DATE_HEADER, HeaderValue::from_str(&utc).unwrap());
-        //res.header(NONCE_HEADER, self.gen_uuid_header());
+        res.header(NONCE_HEADER, Uuid::new_v4().to_hyphenated().to_string());
         // string dateHeaderValue = now.ToGmtString(LONG_DATE_FORMAT_STR);
 
 
@@ -57,8 +59,17 @@ impl JdcloudSigner {
             hasher.result_str()
         }
     }
+}
 
+fn should_sign_header(header: &str) -> bool {
+    return !(header.eq_ignore_ascii_case("user-agent") || header.eq_ignore_ascii_case("authorization"))
+}
 
+fn make_cananical_request_str(request: &Request<String>) -> String {
+    let mut res: String = "".to_owned();
+    res.push_str(request.method().as_str());
+    res.push('\n');
+    res
 }
 
 #[cfg(test)]
@@ -78,5 +89,25 @@ mod tests {
             .body("".to_string())
             .unwrap();
         let req = s.sign_request(&req);  
+    }
+
+    #[test]
+    fn test_should_sign_header() {
+        let should_not_sign_headers = ["user-agent", "User-Agent", "Authorization", "authorization"];
+        let should_sign_headers = ["X-hello", "Content-Length", "User"];
+        for header in should_not_sign_headers.iter() {
+            assert!(!should_sign_header(header))
+        }
+        for header in should_sign_headers.iter() {
+            assert!(should_sign_header(header))
+        }
+    }
+
+    #[test]
+    fn test_make_cananical_request_str() {
+        let req1 = Request::builder().method("GET").body("".to_string()).unwrap();
+        assert_eq!(make_cananical_request_str(&req1), "GET\n");
+        let req2 = Request::builder().method("POST").body("".to_string()).unwrap();
+        assert_eq!(make_cananical_request_str(&req2), "POST\n");
     }
 }
