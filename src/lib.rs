@@ -116,10 +116,6 @@ impl JdcloudSigner {
     }
 }
 
-fn should_sign_header(header: &str) -> bool {
-    return !(header.eq_ignore_ascii_case("user-agent") || header.eq_ignore_ascii_case("authorization"))
-}
-
 fn make_cananical_request_str(request: &Request<String>) -> (String, String) {
     let mut res: String = "".to_owned();
     res.push_str(request.method().as_str());
@@ -160,6 +156,9 @@ fn make_cananical_header_str_and_signed_headers(request: &Request<String>) -> (S
     let mut signed_headers = "".to_owned();
     let mut first = true;
     for x in header_names {
+        if x.0 == "user-agent" || x.0 == "authorization" {
+            continue;
+        }
         res.push_str(x.0.as_str());
         res.push(':');
         res.push_str(&trim_all(x.1.to_str().unwrap()));
@@ -286,7 +285,7 @@ mod tests {
         assert_eq!(get_headers_from_request(&req),
             ["authorization", "content-type", "user-agent", "x-jdcloud-date", "x-jdcloud-nonce"]);
         assert_eq!(req.headers().get("authorization").unwrap(),
-            "JDCLOUD2-HMAC-SHA256 Credential=ak/20180405/cn-north-1/service_name/jdcloud2_request, SignedHeaders=content-type;user-agent;x-jdcloud-date;x-jdcloud-nonce, Signature=b814d29cc86f397d5772e104e67ce125ea621a96d2e55f55171fa4719937a15f");
+            "JDCLOUD2-HMAC-SHA256 Credential=ak/20180405/cn-north-1/service_name/jdcloud2_request, SignedHeaders=content-type;x-jdcloud-date;x-jdcloud-nonce, Signature=cea138630c57ba3de51933926e3b1657c34b4d1b6f86d360511bf40a09f63729");
     }
 
     #[test]
@@ -331,7 +330,7 @@ mod tests {
         let req = make_test_request();
         let now = chrono::Utc.ymd(2018, 4, 5).and_hms(01, 02, 03);
         assert_eq!(s.make_string_to_sign(&req, &now).0,
-            "JDCLOUD2-HMAC-SHA256\n20180405T010203Z\n20180405/cn-north-1/service_name/jdcloud2_request\ne6e831a1bb6514d638df6d183d74e830f048843396ec512150f862654e6ffc33");
+            "JDCLOUD2-HMAC-SHA256\n20180405T010203Z\n20180405/cn-north-1/service_name/jdcloud2_request\ncc696ca02602531bc35d4271dec6399149115f8632a7fa828e8d9e969967a03a");
     }
 
     fn get_headers_from_request(req: &Request<String>) -> Vec<String> {
@@ -343,18 +342,6 @@ mod tests {
         res
     }
 
-
-    #[test]
-    fn test_should_sign_header() {
-        let should_not_sign_headers = ["user-agent", "User-Agent", "Authorization", "authorization"];
-        let should_sign_headers = ["X-hello", "Content-Length", "User"];
-        for header in should_not_sign_headers.iter() {
-            assert!(!should_sign_header(header))
-        }
-        for header in should_sign_headers.iter() {
-            assert!(should_sign_header(header))
-        }
-    }
 
     #[test]
     fn test_make_cananical_request_str() {
