@@ -92,8 +92,25 @@ fn make_cananical_header_str(request: &Request<String>) -> String {
     for x in header_names {
         res.push_str(x.0.as_str());
         res.push(':');
-        res.push_str(x.1.to_str().unwrap().trim_matches(' '));
+        res.push_str(&trim_all(x.1.to_str().unwrap()));
         res.push('\n');
+    }
+    res
+}
+
+fn trim_all(s: &str) -> String {
+    let mut res: String = "".to_owned();
+    let mut last_one_is_space = true;
+    for c in s.trim_matches(' ').chars() {
+        if c == ' ' {
+            if !last_one_is_space {
+                res.push(c);
+                last_one_is_space = true;
+            }
+        } else {
+            res.push(c);
+            last_one_is_space = false;
+        }
     }
     res
 }
@@ -202,6 +219,8 @@ mod tests {
 
         let single_header_tcs = vec![
             ("Hello", "World", "hello:World\n"),
+            ("Hello", "Wor ld", "hello:Wor ld\n"),
+            ("Hello", "Wor  ld", "hello:Wor ld\n"),
             ("Hello", "\"World\"", "hello:\"World\"\n"),
             ("Hello", " World ", "hello:World\n"),
             ("Hello", "  World  ", "hello:World\n"),
