@@ -47,18 +47,7 @@ impl JdcloudSigner {
         }
         let now: DateTime<Utc> = Utc::now();
         let string_to_sign = self.make_string_to_sign(request, &now);
-        let date_str = now.format(SHORT_DATE_FORMAT_STR).to_string();
-
-        let k_secret = self.credential.sk();
-        let mut hasher = Sha256::new();
-        // let mut hmac = Hmac::new(&mut hasher, [SIGNING_KEY, k_secret].concat().as_bytes());
-        // hmac.input_str(&date_str);
-        // hmac.result();
-        // // hmac.raw_result(output: &mut [u8])
-        // // date_str.as_bytes();
-        // hmac.input(SIGNING_KEY.as_bytes);
-        // hmac.input()
-
+        let signing_key = self.make_signing_key(&now);
         let mut res = Request::builder();
         //res.header(DATE_HEADER, HeaderValue::from_str(&utc).unwrap());
         res.header(NONCE_HEADER, Uuid::new_v4().to_hyphenated().to_string());
@@ -66,6 +55,15 @@ impl JdcloudSigner {
 
 
         Ok(Request::builder().body("".to_string()).unwrap())
+    }
+
+    fn make_signing_key(&self, now: &DateTime<Utc>) -> Vec<u8> {
+        let request_date = now.format(SHORT_DATE_FORMAT_STR).to_string();
+        let k_secret = self.credential.sk();
+        let mac = hmac_sha256([SIGNING_KEY, k_secret].concat().as_bytes(), &request_date);
+        let mac = hmac_sha256(&mac, &self.region);
+        let mac = hmac_sha256(&mac, &self.service_name);
+        hmac_sha256(&mac, JDCLOUD_REQUEST)
     }
 
     fn make_credential_scope(&self, request_date: &str) -> String {
@@ -228,6 +226,14 @@ impl EncodeSet for Aws4QueryItemEncodeSet {
 mod tests {
     use super::*;
     use http::header::{CONTENT_TYPE, USER_AGENT};
+
+    #[test]
+    fn test_make_signing_key() {
+        let c = Credential::new("ak".to_string(), "sk".to_string());
+        let s = JdcloudSigner::new(c, "service_name".to_string(), "cn-north-1".to_string());
+        let now = chrono::Utc.ymd(2018, 4, 5).and_hms(01, 02, 03);
+        assert_eq!(base16(&s.make_signing_key(&now)), "b302aa05734bcaf60be65a4be7c971669ac55444769681c19113d80460e31a33");
+    }
 
     fn base16(data: &[u8]) -> String{
         let mut res = "".to_owned();
