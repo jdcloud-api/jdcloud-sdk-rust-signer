@@ -297,12 +297,23 @@ mod tests {
             "JDCLOUD2-HMAC-SHA256\n20180405T010203Z\n20180405/cn-north-1/service_name/jdcloud2_request\ne6e831a1bb6514d638df6d183d74e830f048843396ec512150f862654e6ffc33");
     }
 
+    fn get_headers_from_request(req: &Request<String>) -> Vec<String> {
+        let mut res = Vec::new();
+        for header_name in req.headers().into_iter() {
+            res.push(header_name.0.to_string());
+        }
+        res.sort();
+        res
+    }
+
     #[test]
     fn test_new() {
         let c = Credential::new("ak".to_string(), "sk".to_string());
         let s = JdcloudSigner::new(c, "service_name".to_string(), "cn-north-1".to_string());
         let mut req = make_test_request();
-        let req = s.sign_request(&mut req);
+        let req2 = s.sign_request(&mut req);
+        assert_eq!(get_headers_from_request(&req),
+            ["content-type", "user-agent", "x-jdcloud-date", "x-jdcloud-nonce"]);
     }
 
     #[test]
