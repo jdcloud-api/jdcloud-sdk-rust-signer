@@ -16,9 +16,12 @@ use uuid::Uuid;
 use url::percent_encoding::{utf8_percent_encode, EncodeSet};
 
 static EMPTY_STRING_SHA256: &str = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
+static SHORT_DATE_FORMAT_STR: &str = "%Y%m%d";
 static LONG_DATE_FORMAT_STR: &str = "%Y%m%dT%H%M%SZ";
 static DATE_HEADER: &str = "x-jdcloud-date";
 static NONCE_HEADER: &str = "x-jdcloud-nonce";
+static HMAC_SHA256: &str = "JDCLOUD2-HMAC-SHA256";
+static JDCLOUD_REQUEST: &str = "jdcloud2_request";
 
 pub struct JdcloudSigner {
     credential: Credential,
@@ -39,16 +42,42 @@ impl JdcloudSigner {
         if !self.credential.is_valid() {
             panic!("invalid credential");
         }
-        let utc: DateTime<Utc> = Utc::now();
-        let utc = utc.format(LONG_DATE_FORMAT_STR).to_string();
+        let now: DateTime<Utc> = Utc::now();
+
+        let string_to_sign = self.make_string_to_sign(request, &now);
 
         let mut res = Request::builder();
-        res.header(DATE_HEADER, HeaderValue::from_str(&utc).unwrap());
+        //res.header(DATE_HEADER, HeaderValue::from_str(&utc).unwrap());
         res.header(NONCE_HEADER, Uuid::new_v4().to_hyphenated().to_string());
         // string dateHeaderValue = now.ToGmtString(LONG_DATE_FORMAT_STR);
 
 
         Ok(Request::builder().body("".to_string()).unwrap())
+    }
+
+    fn make_credential_scope(&self, request_date: &str) -> String {
+        format!("{}/{}/{}/{}", request_date, self.region, self.service_name, JDCLOUD_REQUEST)
+    }
+
+    fn make_string_to_sign(&self, request: &Request<String>, now: &DateTime<Utc>) -> String {
+        let request_date_time = now.format(LONG_DATE_FORMAT_STR).to_string();
+        let request_date = now.format(SHORT_DATE_FORMAT_STR).to_string();
+
+        let mut string_to_sign = "".to_owned();
+        string_to_sign.push_str(HMAC_SHA256);
+        string_to_sign.push('\n');
+        string_to_sign.push_str(&request_date_time);
+        string_to_sign.push('\n');
+        let credential_scope = self.make_credential_scope(&request_date);
+        string_to_sign.push_str(&credential_scope);
+        string_to_sign.push('\n');
+
+        let cananical_request = make_cananical_request_str(request);
+        let mut hasher = Sha256::new();
+        hasher.input_str(&cananical_request);
+        let cananical_request = hasher.result_str();
+        string_to_sign.push_str(&cananical_request);
+        string_to_sign
     }
 }
 
@@ -178,6 +207,13 @@ impl EncodeSet for Aws4QueryItemEncodeSet {
 mod tests {
     use super::*;
     use http::header::{CONTENT_TYPE, USER_AGENT};
+
+    #[test]
+    fn test_make_credential_scope() {
+        let c = Credential::new("ak".to_string(), "sk".to_string());
+        let s = JdcloudSigner::new(c, "service_name".to_string(), "cn-north-1".to_string());
+        assert_eq!(s.make_credential_scope("20180101"), "20180101/cn-north-1/service_name/jdcloud2_request");
+    }
 
     #[test]
     fn test_new() {
