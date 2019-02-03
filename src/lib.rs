@@ -60,7 +60,7 @@ impl JdcloudSigner {
     }
 
     fn make_authorization(&self, request: &Request<String>, now: &DateTime<Utc>) -> String {
-        let string_to_sign = self.make_string_to_sign(request, &now);
+        let (string_to_sign, signed_headers) = self.make_string_to_sign(request, &now);
         let signing_key = self.make_signing_key(&now);
         let signature = hmac_sha256(&signing_key, &string_to_sign);
         let signature = base16(&signature);
@@ -69,7 +69,7 @@ impl JdcloudSigner {
             HMAC_SHA256,
             self.credential.ak(),
             self.make_credential_scope(&request_date),
-            "",
+            signed_headers,
             signature
         )
     }
@@ -94,7 +94,7 @@ impl JdcloudSigner {
         format!("{}/{}/{}/{}", request_date, self.region, self.service_name, JDCLOUD_REQUEST)
     }
 
-    fn make_string_to_sign(&self, request: &Request<String>, now: &DateTime<Utc>) -> String {
+    fn make_string_to_sign(&self, request: &Request<String>, now: &DateTime<Utc>) -> (String, String) {
         let request_date_time = now.format(LONG_DATE_FORMAT_STR).to_string();
         let request_date = now.format(SHORT_DATE_FORMAT_STR).to_string();
 
@@ -107,12 +107,12 @@ impl JdcloudSigner {
         string_to_sign.push_str(&credential_scope);
         string_to_sign.push('\n');
 
-        let cananical_request = make_cananical_request_str(request);
+        let (cananical_request, signed_headers) = make_cananical_request_str(request);
         let mut hasher = Sha256::new();
         hasher.input_str(&cananical_request);
         let cananical_request = hasher.result_str();
         string_to_sign.push_str(&cananical_request);
-        string_to_sign
+        (string_to_sign, signed_headers)
     }
 }
 
@@ -120,7 +120,7 @@ fn should_sign_header(header: &str) -> bool {
     return !(header.eq_ignore_ascii_case("user-agent") || header.eq_ignore_ascii_case("authorization"))
 }
 
-fn make_cananical_request_str(request: &Request<String>) -> String {
+fn make_cananical_request_str(request: &Request<String>) -> (String, String) {
     let mut res: String = "".to_owned();
     res.push_str(request.method().as_str());
     res.push('\n');
@@ -134,7 +134,7 @@ fn make_cananical_request_str(request: &Request<String>) -> String {
     res.push_str(&signed_headers);
     res.push('\n');
     res.push_str(&compute_payload_hash(request));
-    res
+    (res, signed_headers)
 }
 
 fn compute_payload_hash(request: &Request<String>) -> String {
@@ -286,7 +286,7 @@ mod tests {
         assert_eq!(get_headers_from_request(&req),
             ["authorization", "content-type", "user-agent", "x-jdcloud-date", "x-jdcloud-nonce"]);
         assert_eq!(req.headers().get("authorization").unwrap(),
-            "JDCLOUD2-HMAC-SHA256 Credential=ak/20180405/cn-north-1/service_name/jdcloud2_request, SignedHeaders=, Signature=b814d29cc86f397d5772e104e67ce125ea621a96d2e55f55171fa4719937a15f");
+            "JDCLOUD2-HMAC-SHA256 Credential=ak/20180405/cn-north-1/service_name/jdcloud2_request, SignedHeaders=content-type;user-agent;x-jdcloud-date;x-jdcloud-nonce, Signature=b814d29cc86f397d5772e104e67ce125ea621a96d2e55f55171fa4719937a15f");
     }
 
     #[test]
@@ -330,7 +330,7 @@ mod tests {
         let s = JdcloudSigner::new(c, "service_name".to_string(), "cn-north-1".to_string());
         let req = make_test_request();
         let now = chrono::Utc.ymd(2018, 4, 5).and_hms(01, 02, 03);
-        assert_eq!(s.make_string_to_sign(&req, &now),
+        assert_eq!(s.make_string_to_sign(&req, &now).0,
             "JDCLOUD2-HMAC-SHA256\n20180405T010203Z\n20180405/cn-north-1/service_name/jdcloud2_request\ne6e831a1bb6514d638df6d183d74e830f048843396ec512150f862654e6ffc33");
     }
 
@@ -359,23 +359,23 @@ mod tests {
     #[test]
     fn test_make_cananical_request_str() {
         let req = Request::builder().method("GET").body("".to_string()).unwrap();
-        assert_eq!(make_cananical_request_str(&req), ["GET\n/\n\n\n\n",EMPTY_STRING_SHA256].concat());
+        assert_eq!(make_cananical_request_str(&req).0, ["GET\n/\n\n\n\n",EMPTY_STRING_SHA256].concat());
         let req = Request::builder().method("POST").body("".to_string()).unwrap();
-        assert_eq!(make_cananical_request_str(&req), ["POST\n/\n\n\n\n",EMPTY_STRING_SHA256].concat());
+        assert_eq!(make_cananical_request_str(&req).0, ["POST\n/\n\n\n\n",EMPTY_STRING_SHA256].concat());
         let req = Request::builder().method("GET").uri("/helloworld").body("".to_string()).unwrap();
-        assert_eq!(make_cananical_request_str(&req), ["GET\n/helloworld\n\n\n\n",EMPTY_STRING_SHA256].concat());
+        assert_eq!(make_cananical_request_str(&req).0, ["GET\n/helloworld\n\n\n\n",EMPTY_STRING_SHA256].concat());
         let req = Request::builder().method("GET").uri("/hello%20world").body("".to_string()).unwrap();
-        assert_eq!(make_cananical_request_str(&req), ["GET\n/hello%20world\n\n\n\n",EMPTY_STRING_SHA256].concat());
+        assert_eq!(make_cananical_request_str(&req).0, ["GET\n/hello%20world\n\n\n\n",EMPTY_STRING_SHA256].concat());
         let req = Request::builder().method("GET").uri("/Hello%20world").body("".to_string()).unwrap();
-        assert_eq!(make_cananical_request_str(&req), ["GET\n/Hello%20world\n\n\n\n",EMPTY_STRING_SHA256].concat());
+        assert_eq!(make_cananical_request_str(&req).0, ["GET\n/Hello%20world\n\n\n\n",EMPTY_STRING_SHA256].concat());
         let req = Request::builder().method("GET").uri("/Hello%20world?").body("".to_string()).unwrap();
-        assert_eq!(make_cananical_request_str(&req), ["GET\n/Hello%20world\n\n\n\n",EMPTY_STRING_SHA256].concat());
+        assert_eq!(make_cananical_request_str(&req).0, ["GET\n/Hello%20world\n\n\n\n",EMPTY_STRING_SHA256].concat());
         let req = Request::builder().method("GET").uri("/Hello%20world?a=1").body("".to_string()).unwrap();
-        assert_eq!(make_cananical_request_str(&req), ["GET\n/Hello%20world\na=1\n\n\n",EMPTY_STRING_SHA256].concat());
+        assert_eq!(make_cananical_request_str(&req).0, ["GET\n/Hello%20world\na=1\n\n\n",EMPTY_STRING_SHA256].concat());
         let req = Request::builder().method("GET").uri("/Hello%20world?a=1").header("A", "B").body("".to_string()).unwrap();
-        assert_eq!(make_cananical_request_str(&req), ["GET\n/Hello%20world\na=1\na:B\n\na\n",EMPTY_STRING_SHA256].concat());
+        assert_eq!(make_cananical_request_str(&req).0, ["GET\n/Hello%20world\na=1\na:B\n\na\n",EMPTY_STRING_SHA256].concat());
         let req = Request::builder().method("GET").uri("/Hello%20world?a=1").header("A", "B").body("a".to_string()).unwrap();
-        assert_eq!(make_cananical_request_str(&req),
+        assert_eq!(make_cananical_request_str(&req).0,
             ["GET\n/Hello%20world\na=1\na:B\n\na\n","ca978112ca1bbdcafac231b39a23dc4da786eff8147c4e72b9807785afee48bb"].concat());
     }
 
