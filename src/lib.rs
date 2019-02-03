@@ -41,22 +41,32 @@ impl JdcloudSigner {
         }
     }
 
-    pub fn sign_request(&self, request: &mut Request<String>) -> Result<Request<String>, &str> {
+    pub fn sign_request(&self, request: &mut Request<String>) -> bool {
         if !self.credential.is_valid() {
             panic!("invalid credential");
         }
 
         let now: DateTime<Utc> = Utc::now();
         self.fill_request(request, &now);
+        let authorization = self.make_authorization(&request, &now);
+        request.headers_mut()
+            .insert("Authorization", HeaderValue::from_str(&authorization).unwrap());
+        true
+    }
+
+    fn make_authorization(&self, request: &Request<String>, now: &DateTime<Utc>) -> String {
         let string_to_sign = self.make_string_to_sign(request, &now);
         let signing_key = self.make_signing_key(&now);
-        let mut res = Request::builder();
-        //res.header(DATE_HEADER, HeaderValue::from_str(&utc).unwrap());
-        res.header(NONCE_HEADER, Uuid::new_v4().to_hyphenated().to_string());
-        // string dateHeaderValue = now.ToGmtString(LONG_DATE_FORMAT_STR);
-
-
-        Ok(Request::builder().body("".to_string()).unwrap())
+        let signature = hmac_sha256(&signing_key, &string_to_sign);
+        let signature = base16(&signature);
+        let request_date = now.format(SHORT_DATE_FORMAT_STR).to_string();
+        format!("{} Credential={}/{}, SignedHeaders={}, Signature={}",
+            HMAC_SHA256,
+            self.credential.ak(),
+            self.make_credential_scope(&request_date),
+            "",
+            signature
+        )
     }
 
     fn fill_request(&self, request: &mut Request<String>, now: &DateTime<Utc>) {
@@ -236,6 +246,18 @@ impl EncodeSet for Aws4QueryItemEncodeSet {
     }
 }
 
+fn base16(data: &[u8]) -> String{
+    let mut res = "".to_owned();
+    let a = "0123456789abcdef".as_bytes();
+    for c in data {
+        let b1 = c/16;
+        let b2 = c%16;
+        res.push(a[b1 as usize] as char);
+        res.push(a[b2 as usize] as char);
+    }
+    res
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -249,17 +271,6 @@ mod tests {
         assert_eq!(base16(&s.make_signing_key(&now)), "b302aa05734bcaf60be65a4be7c971669ac55444769681c19113d80460e31a33");
     }
 
-    fn base16(data: &[u8]) -> String{
-        let mut res = "".to_owned();
-        let a = "0123456789abcdef".as_bytes();
-        for c in data {
-            let b1 = c/16;
-            let b2 = c%16;
-            res.push(a[b1 as usize] as char);
-            res.push(a[b2 as usize] as char);
-        }
-        res
-    }
 
     #[test]
     fn test_hmac_sha1() {
@@ -307,13 +318,13 @@ mod tests {
     }
 
     #[test]
-    fn test_new() {
+    fn test_sign_request() {
         let c = Credential::new("ak".to_string(), "sk".to_string());
         let s = JdcloudSigner::new(c, "service_name".to_string(), "cn-north-1".to_string());
         let mut req = make_test_request();
         let req2 = s.sign_request(&mut req);
         assert_eq!(get_headers_from_request(&req),
-            ["content-type", "user-agent", "x-jdcloud-date", "x-jdcloud-nonce"]);
+            ["authorization", "content-type", "user-agent", "x-jdcloud-date", "x-jdcloud-nonce"]);
     }
 
     #[test]
