@@ -143,7 +143,7 @@ impl EncodeSet for Aws4QueryItemEncodeSet {
             || c == '_' as u8
             || c == '.' as u8
             || c == '~' as u8)
-    }    
+    }
 }
 
 #[cfg(test)]
@@ -162,7 +162,7 @@ mod tests {
             .header(USER_AGENT, "JdcloudSdkRust/0.0.1 vm/0.7.4")
             .body("".to_string())
             .unwrap();
-        let req = s.sign_request(&req);  
+        let req = s.sign_request(&req);
     }
 
     #[test]
@@ -246,12 +246,12 @@ mod tests {
             ("/?a=1", "a=1"),
             ("/?a=1#bcd", "a=1"),
             ("/?a=1&b=1", "a=1&b=1"),
-            ("/?a&b", "a=&b="), 
-            ("/?a=&b", "a=&b="), 
-            ("/?a&b=", "a=&b="), 
-            ("/?a=&b=", "a=&b="), 
-            ("/?b&a", "a=&b="),  
-            ("/?b&a&B&A", "A=&B=&a=&b="),  
+            ("/?a&b", "a=&b="),
+            ("/?a=&b", "a=&b="),
+            ("/?a&b=", "a=&b="),
+            ("/?a=&b=", "a=&b="),
+            ("/?b&a", "a=&b="),
+            ("/?b&a&B&A", "A=&B=&a=&b="),
             ("/?a=-_.~", "a=-_.~"),
             ("/?a=/", "a=%2F"),
             ("/?a=%", "a=%25"),
