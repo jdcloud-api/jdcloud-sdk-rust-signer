@@ -75,6 +75,26 @@ fn make_cananical_request_str(request: &Request<String>) -> String {
     res.push('\n');
     res.push_str(&make_cananical_query_str(request));
     res.push('\n');
+    res.push_str(&make_cananical_header_str(request));
+    res.push('\n');
+    res
+}
+
+fn make_cananical_header_str(request: &Request<String>) -> String {
+    let mut header_names = Vec::new();
+    for header_name in request.headers().into_iter() {
+        header_names.push(header_name);
+    }
+    header_names.sort_by(|a, b|{
+        a.0.as_str().partial_cmp(b.0.as_str()).unwrap()
+    });
+    let mut res: String = "".to_owned();
+    for x in header_names {
+        res.push_str(x.0.as_str());
+        res.push(':');
+        res.push_str(x.1.to_str().unwrap().trim_matches(' '));
+        res.push('\n');
+    }
     res
 }
 
@@ -160,19 +180,60 @@ mod tests {
     #[test]
     fn test_make_cananical_request_str() {
         let req = Request::builder().method("GET").body("".to_string()).unwrap();
-        assert_eq!(make_cananical_request_str(&req), "GET\n/\n\n");
+        assert_eq!(make_cananical_request_str(&req), "GET\n/\n\n\n");
         let req = Request::builder().method("POST").body("".to_string()).unwrap();
-        assert_eq!(make_cananical_request_str(&req), "POST\n/\n\n");
+        assert_eq!(make_cananical_request_str(&req), "POST\n/\n\n\n");
         let req = Request::builder().method("GET").uri("/helloworld").body("".to_string()).unwrap();
-        assert_eq!(make_cananical_request_str(&req), "GET\n/helloworld\n\n");
+        assert_eq!(make_cananical_request_str(&req), "GET\n/helloworld\n\n\n");
         let req = Request::builder().method("GET").uri("/hello%20world").body("".to_string()).unwrap();
-        assert_eq!(make_cananical_request_str(&req), "GET\n/hello%20world\n\n");
+        assert_eq!(make_cananical_request_str(&req), "GET\n/hello%20world\n\n\n");
         let req = Request::builder().method("GET").uri("/Hello%20world").body("".to_string()).unwrap();
-        assert_eq!(make_cananical_request_str(&req), "GET\n/Hello%20world\n\n");
+        assert_eq!(make_cananical_request_str(&req), "GET\n/Hello%20world\n\n\n");
         let req = Request::builder().method("GET").uri("/Hello%20world?").body("".to_string()).unwrap();
-        assert_eq!(make_cananical_request_str(&req), "GET\n/Hello%20world\n\n");
+        assert_eq!(make_cananical_request_str(&req), "GET\n/Hello%20world\n\n\n");
         let req = Request::builder().method("GET").uri("/Hello%20world?a=1").body("".to_string()).unwrap();
-        assert_eq!(make_cananical_request_str(&req), "GET\n/Hello%20world\na=1\n");
+        assert_eq!(make_cananical_request_str(&req), "GET\n/Hello%20world\na=1\n\n");
+    }
+
+    #[test]
+    fn test_make_cananical_header_str() {
+        let req = Request::builder().method("GET").body("".to_string()).unwrap();
+        assert_eq!(make_cananical_header_str(&req), "");
+
+        let single_header_tcs = vec![
+            ("Hello", "World", "hello:World\n"),
+            ("Hello", "\"World\"", "hello:\"World\"\n"),
+            ("Hello", " World ", "hello:World\n"),
+            ("Hello", "  World  ", "hello:World\n"),
+            ("Hello", "  World", "hello:World\n"),
+            ("Hello", "World  ", "hello:World\n"),
+            ("Hello", "", "hello:\n"),
+            ("Hello", "  ", "hello:\n"),
+            ("Hello", "  \t", "hello:\t\n"),
+        ];
+
+        for tc in single_header_tcs {
+            let req = Request::builder().method("GET")
+                .header(tc.0, tc.1)
+                .body("".to_string()).unwrap();
+            assert_eq!(make_cananical_header_str(&req), tc.2);
+        }
+
+        let multi_header_cases = vec![
+            (vec![("Hello", "World")], "hello:World\n"),
+            (vec![("Hello", "World"), ("A", "B")], "a:B\nhello:World\n"),
+            (vec![("A", "A"), ("B", "B")], "a:A\nb:B\n"),
+            (vec![("B", "B"), ("A", "A")], "a:A\nb:B\n"),
+        ];
+        for tc in multi_header_cases {
+            let mut req = Request::builder();
+            req.method("GET");
+            for x in tc.0 {
+                req.header(x.0, x.1);
+            }
+            let req = req.body("".to_string()).unwrap();
+            assert_eq!(make_cananical_header_str(&req), tc.1);
+        }
     }
 
     #[test]
@@ -190,6 +251,7 @@ mod tests {
             ("/?a&b=", "a=&b="), 
             ("/?a=&b=", "a=&b="), 
             ("/?b&a", "a=&b="),  
+            ("/?b&a&B&A", "A=&B=&a=&b="),  
             ("/?a=-_.~", "a=-_.~"),
             ("/?a=/", "a=%2F"),
             ("/?a=%", "a=%25"),
