@@ -8,6 +8,8 @@ mod credential;
 
 use crypto::sha2::Sha256;
 use crypto::digest::Digest;
+use crypto::hmac::Hmac;
+use crypto::mac::Mac;
 use crate::credential::Credential;
 use http::Request;
 use http::header::HeaderValue;
@@ -22,6 +24,7 @@ static DATE_HEADER: &str = "x-jdcloud-date";
 static NONCE_HEADER: &str = "x-jdcloud-nonce";
 static HMAC_SHA256: &str = "JDCLOUD2-HMAC-SHA256";
 static JDCLOUD_REQUEST: &str = "jdcloud2_request";
+static SIGNING_KEY: &str = "JDCLOUD2";
 
 pub struct JdcloudSigner {
     credential: Credential,
@@ -43,8 +46,18 @@ impl JdcloudSigner {
             panic!("invalid credential");
         }
         let now: DateTime<Utc> = Utc::now();
-
         let string_to_sign = self.make_string_to_sign(request, &now);
+        let date_str = now.format(SHORT_DATE_FORMAT_STR).to_string();
+
+        let k_secret = self.credential.sk();
+        let mut hasher = Sha256::new();
+        // let mut hmac = Hmac::new(&mut hasher, [SIGNING_KEY, k_secret].concat().as_bytes());
+        // hmac.input_str(&date_str);
+        // hmac.result();
+        // // hmac.raw_result(output: &mut [u8])
+        // // date_str.as_bytes();
+        // hmac.input(SIGNING_KEY.as_bytes);
+        // hmac.input()
 
         let mut res = Request::builder();
         //res.header(DATE_HEADER, HeaderValue::from_str(&utc).unwrap());
@@ -187,6 +200,14 @@ fn make_cananical_query_str(request: &Request<String>) -> String {
     res
 }
 
+fn hmac_sha256(key: &[u8], data: &str) -> Vec<u8> {
+    let mut hmac = Hmac::new(Sha256::new(), key);
+    hmac.input(data.as_bytes());
+    let result = hmac.result();
+    let code = result.code();
+    code.to_vec()
+}
+
 #[derive(Copy, Clone, Debug)]
 struct Aws4QueryItemEncodeSet;
 
@@ -207,6 +228,27 @@ impl EncodeSet for Aws4QueryItemEncodeSet {
 mod tests {
     use super::*;
     use http::header::{CONTENT_TYPE, USER_AGENT};
+
+    fn base16(data: &[u8]) -> String{
+        let mut res = "".to_owned();
+        let a = "0123456789abcdef".as_bytes();
+        for c in data {
+            let b1 = c/16;
+            let b2 = c%16;
+            res.push(a[b1 as usize] as char);
+            res.push(a[b2 as usize] as char);
+        }
+        res
+    }
+
+    #[test]
+    fn test_hmac_sha1() {
+        let a = hmac_sha256("AWS4wJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEY".as_bytes(), "20150830");
+        let a = hmac_sha256(&a, "us-east-1");
+        let a = hmac_sha256(&a, "iam");
+        let a = hmac_sha256(&a, "aws4_request");
+        assert_eq!(base16(&a), "c4afb1cc5771d871763a393e44b703571b55cc28424d1a5e86da6ed3c154a4b9");
+    }
 
     fn make_test_request() -> Request<String> {
         let mut req = Request::builder();
@@ -240,7 +282,7 @@ mod tests {
         let c = Credential::new("ak".to_string(), "sk".to_string());
         let s = JdcloudSigner::new(c, "service_name".to_string(), "cn-north-1".to_string());
         let req = make_test_request();
-        let req = s.sign_request(&req);
+            let req = s.sign_request(&req);
     }
 
     #[test]

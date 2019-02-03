@@ -14,6 +14,14 @@ impl Credential {
     pub fn is_valid(&self) -> bool {
         !self.ak.is_empty() && !self.sk.is_empty()
     }
+
+    pub fn ak(&self) -> &str {
+        &self.ak
+    }
+
+    pub fn sk(&self) -> &str {
+        &self.sk
+    }
 }
 
 #[cfg(test)]
