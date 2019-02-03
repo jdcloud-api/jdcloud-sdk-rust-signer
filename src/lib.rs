@@ -208,6 +208,16 @@ mod tests {
     use super::*;
     use http::header::{CONTENT_TYPE, USER_AGENT};
 
+    fn make_test_request() -> Request<String> {
+        let mut req = Request::builder();
+        req.uri("http://www.jdcloud-api.com/v1/regions/cn-north-1/instances?pageNumber=2&pageSize=10")
+            .method("GET")
+            .header(CONTENT_TYPE, "application/json")
+            .header(USER_AGENT, "JdcloudSdkRust/0.0.1 vm/0.7.4")
+            .body("".to_string())
+            .unwrap()
+    }
+
     #[test]
     fn test_make_credential_scope() {
         let c = Credential::new("ak".to_string(), "sk".to_string());
@@ -216,16 +226,20 @@ mod tests {
     }
 
     #[test]
+    fn test_make_string_to_sign() {
+        let c = Credential::new("ak".to_string(), "sk".to_string());
+        let s = JdcloudSigner::new(c, "service_name".to_string(), "cn-north-1".to_string());
+        let req = make_test_request();
+        let now = chrono::Utc.ymd(2018, 4, 5).and_hms(01, 02, 03);
+        assert_eq!(s.make_string_to_sign(&req, &now),
+            "JDCLOUD2-HMAC-SHA256\n20180405T010203Z\n20180405/cn-north-1/service_name/jdcloud2_request\ne6e831a1bb6514d638df6d183d74e830f048843396ec512150f862654e6ffc33");
+    }
+
+    #[test]
     fn test_new() {
         let c = Credential::new("ak".to_string(), "sk".to_string());
         let s = JdcloudSigner::new(c, "service_name".to_string(), "cn-north-1".to_string());
-        let mut req = Request::builder();
-        let req = req.uri("http://www.jdcloud-api.com/v1/regions/cn-north-1/instances?pageNumber=2&pageSize=10")
-            .method("GET")
-            .header(CONTENT_TYPE, "application/json")
-            .header(USER_AGENT, "JdcloudSdkRust/0.0.1 vm/0.7.4")
-            .body("".to_string())
-            .unwrap();
+        let req = make_test_request();
         let req = s.sign_request(&req);
     }
 
