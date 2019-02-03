@@ -39,7 +39,6 @@ impl JdcloudSigner {
         if !self.credential.is_valid() {
             panic!("invalid credential");
         }
-        let payload_hash = self.compute_payload_hash(request);
         let utc: DateTime<Utc> = Utc::now();
         let utc = utc.format(LONG_DATE_FORMAT_STR).to_string();
 
@@ -50,16 +49,6 @@ impl JdcloudSigner {
 
 
         Ok(Request::builder().body("".to_string()).unwrap())
-    }
-
-    fn compute_payload_hash(&self, request: &Request<String>) -> String {
-        if request.body().is_empty() {
-            EMPTY_STRING_SHA256.to_string()
-        } else {
-            let mut hasher = Sha256::new();
-            hasher.input_str(request.body());
-            hasher.result_str()
-        }
     }
 }
 
@@ -80,8 +69,20 @@ fn make_cananical_request_str(request: &Request<String>) -> String {
     res.push('\n');
     res.push_str(&signed_headers);
     res.push('\n');
+    res.push_str(&compute_payload_hash(request));
     res
 }
+
+fn compute_payload_hash(request: &Request<String>) -> String {
+    if request.body().is_empty() {
+        EMPTY_STRING_SHA256.to_string()
+    } else {
+        let mut hasher = Sha256::new();
+        hasher.input_str(request.body());
+        hasher.result_str()
+    }
+}
+
 
 fn make_cananical_header_str_and_signed_headers(request: &Request<String>) -> (String, String) {
     let mut header_names = Vec::new();
@@ -207,19 +208,24 @@ mod tests {
     #[test]
     fn test_make_cananical_request_str() {
         let req = Request::builder().method("GET").body("".to_string()).unwrap();
-        assert_eq!(make_cananical_request_str(&req), "GET\n/\n\n\n\n");
+        assert_eq!(make_cananical_request_str(&req), ["GET\n/\n\n\n\n",EMPTY_STRING_SHA256].concat());
         let req = Request::builder().method("POST").body("".to_string()).unwrap();
-        assert_eq!(make_cananical_request_str(&req), "POST\n/\n\n\n\n");
+        assert_eq!(make_cananical_request_str(&req), ["POST\n/\n\n\n\n",EMPTY_STRING_SHA256].concat());
         let req = Request::builder().method("GET").uri("/helloworld").body("".to_string()).unwrap();
-        assert_eq!(make_cananical_request_str(&req), "GET\n/helloworld\n\n\n\n");
+        assert_eq!(make_cananical_request_str(&req), ["GET\n/helloworld\n\n\n\n",EMPTY_STRING_SHA256].concat());
         let req = Request::builder().method("GET").uri("/hello%20world").body("".to_string()).unwrap();
-        assert_eq!(make_cananical_request_str(&req), "GET\n/hello%20world\n\n\n\n");
+        assert_eq!(make_cananical_request_str(&req), ["GET\n/hello%20world\n\n\n\n",EMPTY_STRING_SHA256].concat());
         let req = Request::builder().method("GET").uri("/Hello%20world").body("".to_string()).unwrap();
-        assert_eq!(make_cananical_request_str(&req), "GET\n/Hello%20world\n\n\n\n");
+        assert_eq!(make_cananical_request_str(&req), ["GET\n/Hello%20world\n\n\n\n",EMPTY_STRING_SHA256].concat());
         let req = Request::builder().method("GET").uri("/Hello%20world?").body("".to_string()).unwrap();
-        assert_eq!(make_cananical_request_str(&req), "GET\n/Hello%20world\n\n\n\n");
+        assert_eq!(make_cananical_request_str(&req), ["GET\n/Hello%20world\n\n\n\n",EMPTY_STRING_SHA256].concat());
         let req = Request::builder().method("GET").uri("/Hello%20world?a=1").body("".to_string()).unwrap();
-        assert_eq!(make_cananical_request_str(&req), "GET\n/Hello%20world\na=1\n\n\n");
+        assert_eq!(make_cananical_request_str(&req), ["GET\n/Hello%20world\na=1\n\n\n",EMPTY_STRING_SHA256].concat());
+        let req = Request::builder().method("GET").uri("/Hello%20world?a=1").header("A", "B").body("".to_string()).unwrap();
+        assert_eq!(make_cananical_request_str(&req), ["GET\n/Hello%20world\na=1\na:B\n\na\n",EMPTY_STRING_SHA256].concat());
+        let req = Request::builder().method("GET").uri("/Hello%20world?a=1").header("A", "B").body("a".to_string()).unwrap();
+        assert_eq!(make_cananical_request_str(&req),
+            ["GET\n/Hello%20world\na=1\na:B\n\na\n","ca978112ca1bbdcafac231b39a23dc4da786eff8147c4e72b9807785afee48bb"].concat());
     }
 
     fn make_cananical_header_str(request: &Request<String>) -> String {
