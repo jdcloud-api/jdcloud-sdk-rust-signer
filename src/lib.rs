@@ -219,7 +219,7 @@ mod tests {
         let req = Request::builder().method("GET").uri("/Hello%20world?").body("".to_string()).unwrap();
         assert_eq!(make_cananical_request_str(&req), "GET\n/Hello%20world\n\n\n\n");
         let req = Request::builder().method("GET").uri("/Hello%20world?a=1").body("".to_string()).unwrap();
-        assert_eq!(make_cananical_request_str(&req), "GET\n/Hello%20world\na=1\n\n\n    ");
+        assert_eq!(make_cananical_request_str(&req), "GET\n/Hello%20world\na=1\n\n\n");
     }
 
     fn make_cananical_header_str(request: &Request<String>) -> String {
