@@ -41,11 +41,13 @@ impl JdcloudSigner {
         }
     }
 
-    pub fn sign_request(&self, request: &Request<String>) -> Result<Request<String>, &str> {
+    pub fn sign_request(&self, request: &mut Request<String>) -> Result<Request<String>, &str> {
         if !self.credential.is_valid() {
             panic!("invalid credential");
         }
+
         let now: DateTime<Utc> = Utc::now();
+        self.fill_request(request, &now);
         let string_to_sign = self.make_string_to_sign(request, &now);
         let signing_key = self.make_signing_key(&now);
         let mut res = Request::builder();
@@ -55,6 +57,18 @@ impl JdcloudSigner {
 
 
         Ok(Request::builder().body("".to_string()).unwrap())
+    }
+
+    fn fill_request(&self, request: &mut Request<String>, now: &DateTime<Utc>) {
+        let uuid = Uuid::new_v4().to_hyphenated().to_string();
+        self.fill_request_with_uuid(request, now, &uuid)
+    }
+
+    fn fill_request_with_uuid(&self, request: &mut Request<String>, now: &DateTime<Utc>, uuid: &str) {
+        let request_date_time = now.format(LONG_DATE_FORMAT_STR).to_string();
+        let headers = request.headers_mut();
+        headers.insert(DATE_HEADER, HeaderValue::from_str(&request_date_time).unwrap());
+        headers.insert(NONCE_HEADER, HeaderValue::from_str(uuid).unwrap());
     }
 
     fn make_signing_key(&self, now: &DateTime<Utc>) -> Vec<u8> {
@@ -287,8 +301,8 @@ mod tests {
     fn test_new() {
         let c = Credential::new("ak".to_string(), "sk".to_string());
         let s = JdcloudSigner::new(c, "service_name".to_string(), "cn-north-1".to_string());
-        let req = make_test_request();
-            let req = s.sign_request(&req);
+        let mut req = make_test_request();
+        let req = s.sign_request(&mut req);
     }
 
     #[test]
