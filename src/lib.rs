@@ -47,8 +47,13 @@ impl JdcloudSigner {
         }
 
         let now: DateTime<Utc> = Utc::now();
-        self.fill_request(request, &now);
-        let authorization = self.make_authorization(&request, &now);
+        let uuid = Uuid::new_v4().to_hyphenated().to_string();
+        self.sign_request_2(request, &now, &uuid)
+    }
+
+    fn sign_request_2(&self, request: &mut Request<String>, now: &DateTime<Utc>, uuid: &str) -> bool {
+        self.fill_request_with_uuid(request, now, uuid);
+        let authorization = self.make_authorization(&request, now);
         request.headers_mut()
             .insert("Authorization", HeaderValue::from_str(&authorization).unwrap());
         true
@@ -67,11 +72,6 @@ impl JdcloudSigner {
             "",
             signature
         )
-    }
-
-    fn fill_request(&self, request: &mut Request<String>, now: &DateTime<Utc>) {
-        let uuid = Uuid::new_v4().to_hyphenated().to_string();
-        self.fill_request_with_uuid(request, now, &uuid)
     }
 
     fn fill_request_with_uuid(&self, request: &mut Request<String>, now: &DateTime<Utc>, uuid: &str) {
@@ -264,6 +264,32 @@ mod tests {
     use http::header::{CONTENT_TYPE, USER_AGENT};
 
     #[test]
+    fn test_sign_request() {
+        let c = Credential::new("ak".to_string(), "sk".to_string());
+        let s = JdcloudSigner::new(c, "service_name".to_string(), "cn-north-1".to_string());
+        let mut req = make_test_request();
+        let res = s.sign_request(&mut req);
+        assert!(res);
+        assert_eq!(get_headers_from_request(&req),
+            ["authorization", "content-type", "user-agent", "x-jdcloud-date", "x-jdcloud-nonce"]);
+    }
+
+    #[test]
+    fn test_sign_request_2() {
+        let c = Credential::new("ak".to_string(), "sk".to_string());
+        let s = JdcloudSigner::new(c, "service_name".to_string(), "cn-north-1".to_string());
+        let mut req = make_test_request();
+        let now = chrono::Utc.ymd(2018, 4, 5).and_hms(01, 02, 03);
+        let uuid = "55f3919e-3a7d-4174-b117-f150ff25e274";
+        let res = s.sign_request_2(&mut req, &now, &uuid);
+        assert!(res);
+        assert_eq!(get_headers_from_request(&req),
+            ["authorization", "content-type", "user-agent", "x-jdcloud-date", "x-jdcloud-nonce"]);
+        assert_eq!(req.headers().get("authorization").unwrap(),
+            "JDCLOUD2-HMAC-SHA256 Credential=ak/20180405/cn-north-1/service_name/jdcloud2_request, SignedHeaders=, Signature=b814d29cc86f397d5772e104e67ce125ea621a96d2e55f55171fa4719937a15f");
+    }
+
+    #[test]
     fn test_make_signing_key() {
         let c = Credential::new("ak".to_string(), "sk".to_string());
         let s = JdcloudSigner::new(c, "service_name".to_string(), "cn-north-1".to_string());
@@ -317,15 +343,6 @@ mod tests {
         res
     }
 
-    #[test]
-    fn test_sign_request() {
-        let c = Credential::new("ak".to_string(), "sk".to_string());
-        let s = JdcloudSigner::new(c, "service_name".to_string(), "cn-north-1".to_string());
-        let mut req = make_test_request();
-        let req2 = s.sign_request(&mut req);
-        assert_eq!(get_headers_from_request(&req),
-            ["authorization", "content-type", "user-agent", "x-jdcloud-date", "x-jdcloud-nonce"]);
-    }
 
     #[test]
     fn test_should_sign_header() {
