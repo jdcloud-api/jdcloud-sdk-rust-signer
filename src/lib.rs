@@ -286,6 +286,14 @@ mod tests {
             ["authorization", "content-type", "user-agent", "x-jdcloud-date", "x-jdcloud-nonce"]);
         assert_eq!(req.headers().get("authorization").unwrap(),
             "JDCLOUD2-HMAC-SHA256 Credential=ak/20180405/cn-north-1/service_name/jdcloud2_request, SignedHeaders=content-type;x-jdcloud-date;x-jdcloud-nonce, Signature=cea138630c57ba3de51933926e3b1657c34b4d1b6f86d360511bf40a09f63729");
+        assert_eq!(req.headers().get("content-type").unwrap(),
+            "application/json");
+        assert_eq!(req.headers().get("user-agent").unwrap(),
+            "JdcloudSdkRust/0.0.1 vm/0.7.4");
+        assert_eq!(req.headers().get("x-jdcloud-date").unwrap(),
+            "20180405T010203Z");
+        assert_eq!(req.headers().get("x-jdcloud-nonce").unwrap(),
+            "55f3919e-3a7d-4174-b117-f150ff25e274");
     }
 
     #[test]
