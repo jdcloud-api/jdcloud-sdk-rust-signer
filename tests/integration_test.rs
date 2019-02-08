@@ -28,5 +28,19 @@ fn test_vm() {
         .body("".to_string()).unwrap();
     signer.sign_request(&mut req);
     println!("{:?}", req);
+    rt::run(fetch_req(&req));
+}
+
+fn fetch_req(req: &http::Request<String>) -> impl Future<Item=(), Error=()> {
+    let client = Client::new();
+    let uri = req.uri().to_string().parse().unwrap();
+    client
+        .get(uri)
+        .map(|res| {
+          println!("Response: {}", res.status());
+        })
+        .map_err(|err| {
+            println!("Error: {}", err);
+        })
 }
 
