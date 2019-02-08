@@ -13,23 +13,20 @@ use http::Request;
 fn test_vm() {
     let ak = match env::var("JDCLOUD_AK") {
         Ok(val) => val,
-        Err(e) => return
+        Err(_e) => return
     };
     let sk = match env::var("JDCLOUD_SK") {
         Ok(val) => val,
-        Err(e) => return
+        Err(_e) => return
     };
     let credential = Credential::new(ak, sk);
     let signer = JdcloudSigner::new(credential, "vm".to_string(), "cn-north-1".to_string());
 
     let mut req = Request::builder();
-    let req = req.method("GET")
+    let mut req = req.method("GET")
         .uri("http://vm.jdcloud-api.com/v1/regions/cn-north-1/instances")
-        .body(Body::empty()).unwrap();
+        .body("".to_string()).unwrap();
     signer.sign_request(&mut req);
-
-    let client = Client::new();
-    client.request(req);
-
+    println!("{:?}", req);
 }
 
