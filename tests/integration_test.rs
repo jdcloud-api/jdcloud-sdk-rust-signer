@@ -3,6 +3,7 @@ extern crate hyper;
 use hyper::{Client, Uri, client::HttpConnector};
 use hyper::rt::{self, Future, Stream};
 use hyper::Body;
+use hyper::header::HeaderValue;
 use std::env;
 
 use jdcloud_sdk_rust_signer::{Credential, JdcloudSigner};
@@ -33,9 +34,14 @@ fn test_vm() {
 
 fn fetch_req(req: &http::Request<String>) -> impl Future<Item=(), Error=()> {
     let client = Client::new();
-    let uri = req.uri().to_string().parse().unwrap();
+    let mut req2 = Request::new(Body::empty());
+    *req2.uri_mut() = req.uri().clone();
+    req2.headers_mut().insert(
+        hyper::header::CONTENT_TYPE,
+        HeaderValue::from_static("application/json")
+    );
     client
-        .get(uri)
+        .request(req2)
         .map(|res| {
           println!("Response: {}", res.status());
         })
