@@ -1,9 +1,11 @@
 extern crate hyper;
 
-use hyper::{Client, Uri, client::HttpConnector};
+// #[macro_use]
+// extern crate futures;
+
+use hyper::Client;
 use hyper::rt::{self, Future, Stream};
 use hyper::Body;
-use hyper::header::HeaderValue;
 use std::env;
 
 use jdcloud_sdk_rust_signer::{Credential, JdcloudSigner};
@@ -36,17 +38,31 @@ fn fetch_req(req: &http::Request<String>) -> impl Future<Item=(), Error=()> {
     let client = Client::new();
     let mut req2 = Request::new(Body::empty());
     *req2.uri_mut() = req.uri().clone();
-    req2.headers_mut().insert(
-        hyper::header::CONTENT_TYPE,
-        HeaderValue::from_static("application/json")
-    );
+    for header in req.headers().into_iter() {
+        req2.headers_mut().insert(
+            header.0,
+            header.1.clone()
+        );
+    }
     client
         .request(req2)
         .map(|res| {
-          println!("Response: {}", res.status());
+            assert_eq!(res.status(), 200);
+            println!("Headers: \n{:?}", res.headers());
+            // let body = try_ready!(res.body().poll());
+            // println!("Error: {:?}", body);
         })
         .map_err(|err| {
             println!("Error: {}", err);
         })
 }
 
+// type Error = Box<dyn std::error::Error>;
+
+// fn example(body: &hyper::Body) -> impl Future<Item = String, Error = Error> {
+//     body.map_err(Error::from)
+//         .concat2()
+//         .and_then(|c| {
+//             str::from_utf8(&c).map(str::to_owned).map_err(Error::from)
+//         })
+// }

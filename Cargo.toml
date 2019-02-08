@@ -13,3 +13,4 @@ uuid = { version = "0.7", features = ["v4"] }
 
 [dev-dependencies]
 hyper = "0.12.23"
+futures = "0.1"
