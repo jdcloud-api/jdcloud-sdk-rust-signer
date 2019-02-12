@@ -59,26 +59,26 @@ impl Signer {
         Ok(true)
     }
 
-    fn make_authorization(&self, request: &Request<String>, now: &DateTime<Utc>) -> String {
-        let (string_to_sign, signed_headers) = self.make_string_to_sign(request, &now);
-        let signing_key = self.make_signing_key(&now);
-        let signature = hmac_sha256(&signing_key, &string_to_sign);
-        let signature = base16(&signature);
-        let request_date = now.format(SHORT_DATE_FORMAT_STR).to_string();
-        format!("{} Credential={}/{}, SignedHeaders={}, Signature={}",
-            HMAC_SHA256,
-            self.credential.ak(),
-            self.make_credential_scope(&request_date),
-            signed_headers,
-            signature
-        )
-    }
-
     fn fill_request_with_uuid(&self, request: &mut Request<String>, now: &DateTime<Utc>, uuid: &str) {
         let request_date_time = now.format(LONG_DATE_FORMAT_STR).to_string();
         let headers = request.headers_mut();
         headers.insert(DATE_HEADER, HeaderValue::from_str(&request_date_time).unwrap());
         headers.insert(NONCE_HEADER, HeaderValue::from_str(uuid).unwrap());
+    }
+
+    fn make_authorization(&self, request: &Request<String>, now: &DateTime<Utc>) -> String {
+        let signing_key = self.make_signing_key(&now);
+        let credential_scope = self.make_credential_scope(&now);
+        let (string_to_sign, signed_headers) = self.make_string_to_sign(request, &now);
+        let signature = hmac_sha256(&signing_key, &string_to_sign);
+        let signature = base16(&signature);
+        format!("{} Credential={}/{}, SignedHeaders={}, Signature={}",
+            HMAC_SHA256,
+            self.credential.ak(),
+            credential_scope,
+            signed_headers,
+            signature
+        )
     }
 
     fn make_signing_key(&self, now: &DateTime<Utc>) -> Vec<u8> {
@@ -90,28 +90,25 @@ impl Signer {
         hmac_sha256(&mac, JDCLOUD_REQUEST)
     }
 
-    fn make_credential_scope(&self, request_date: &str) -> String {
+    fn make_credential_scope(&self, now: &DateTime<Utc>) -> String {
+        let request_date = now.format(SHORT_DATE_FORMAT_STR).to_string();
         format!("{}/{}/{}/{}", request_date, self.region, self.service_name, JDCLOUD_REQUEST)
     }
 
     fn make_string_to_sign(&self, request: &Request<String>, now: &DateTime<Utc>) -> (String, String) {
         let request_date_time = now.format(LONG_DATE_FORMAT_STR).to_string();
-        let request_date = now.format(SHORT_DATE_FORMAT_STR).to_string();
-
-        let mut string_to_sign = "".to_owned();
-        string_to_sign.push_str(HMAC_SHA256);
-        string_to_sign.push('\n');
-        string_to_sign.push_str(&request_date_time);
-        string_to_sign.push('\n');
-        let credential_scope = self.make_credential_scope(&request_date);
-        string_to_sign.push_str(&credential_scope);
-        string_to_sign.push('\n');
 
         let (cananical_request, signed_headers) = make_cananical_request_str(request);
         let mut hasher = Sha256::new();
         hasher.input_str(&cananical_request);
         let cananical_request = hasher.result_str();
-        string_to_sign.push_str(&cananical_request);
+
+        let string_to_sign = format!("{}\n{}\n{}\n{}",
+            HMAC_SHA256,
+            &request_date_time,
+            self.make_credential_scope(now),
+            &cananical_request
+            );
         (string_to_sign, signed_headers)
     }
 }
@@ -328,7 +325,8 @@ mod tests {
     fn test_make_credential_scope() {
         let c = Credential::new("ak".to_string(), "sk".to_string());
         let s = Signer::new(c, "service_name".to_string(), "cn-north-1".to_string());
-        assert_eq!(s.make_credential_scope("20180101"), "20180101/cn-north-1/service_name/jdcloud2_request");
+        let now = chrono::Utc.ymd(2018, 1, 1).and_hms(0,0,0);
+        assert_eq!(s.make_credential_scope(&now), "20180101/cn-north-1/service_name/jdcloud2_request");
     }
 
     #[test]
