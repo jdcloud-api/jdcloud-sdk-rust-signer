@@ -4,11 +4,11 @@ extern crate hyper;
 // extern crate futures;
 
 use hyper::Client;
-use hyper::rt::{self, Future, Stream};
+use hyper::rt::{self, Future};
 use hyper::Body;
 use std::env;
 
-use jdcloud_sdk_rust_signer::{Credential, JdcloudSigner};
+use jdcloud_sdk_rust_signer::{Credential, Signer};
 use http::Request;
 
 
@@ -23,7 +23,7 @@ fn test_vm() {
         Err(_e) => return
     };
     let credential = Credential::new(ak, sk);
-    let signer = JdcloudSigner::new(credential, "vm".to_string(), "cn-north-1".to_string());
+    let signer = Signer::new(credential, "vm".to_string(), "cn-north-1".to_string());
 
     let mut req = Request::builder();
     let mut req = req.method("GET")

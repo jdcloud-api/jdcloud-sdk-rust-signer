@@ -24,15 +24,15 @@ static HMAC_SHA256: &str = "JDCLOUD2-HMAC-SHA256";
 static JDCLOUD_REQUEST: &str = "jdcloud2_request";
 static SIGNING_KEY: &str = "JDCLOUD2";
 
-pub struct JdcloudSigner {
+pub struct Signer {
     credential: Credential,
     service_name: String,
     region: String,
 }
 
-impl JdcloudSigner {
-    pub fn new(credential: Credential, service_name: String, region: String) -> JdcloudSigner {
-        JdcloudSigner {
+impl Signer {
+    pub fn new(credential: Credential, service_name: String, region: String) -> Signer {
+        Signer {
             credential,
             service_name,
             region
@@ -263,7 +263,7 @@ mod tests {
     #[test]
     fn test_sign_request() {
         let c = Credential::new("ak".to_string(), "sk".to_string());
-        let s = JdcloudSigner::new(c, "service_name".to_string(), "cn-north-1".to_string());
+        let s = Signer::new(c, "service_name".to_string(), "cn-north-1".to_string());
         let mut req = make_test_request();
         let res = s.sign_request(&mut req);
         assert!(res);
@@ -274,7 +274,7 @@ mod tests {
     #[test]
     fn test_sign_request_2() {
         let c = Credential::new("ak".to_string(), "sk".to_string());
-        let s = JdcloudSigner::new(c, "service_name".to_string(), "cn-north-1".to_string());
+        let s = Signer::new(c, "service_name".to_string(), "cn-north-1".to_string());
         let mut req = make_test_request();
         let now = chrono::Utc.ymd(2018, 4, 5).and_hms(01, 02, 03);
         let uuid = "55f3919e-3a7d-4174-b117-f150ff25e274";
@@ -297,7 +297,7 @@ mod tests {
     #[test]
     fn test_make_signing_key() {
         let c = Credential::new("ak".to_string(), "sk".to_string());
-        let s = JdcloudSigner::new(c, "service_name".to_string(), "cn-north-1".to_string());
+        let s = Signer::new(c, "service_name".to_string(), "cn-north-1".to_string());
         let now = chrono::Utc.ymd(2018, 4, 5).and_hms(01, 02, 03);
         assert_eq!(base16(&s.make_signing_key(&now)), "b302aa05734bcaf60be65a4be7c971669ac55444769681c19113d80460e31a33");
     }
@@ -325,14 +325,14 @@ mod tests {
     #[test]
     fn test_make_credential_scope() {
         let c = Credential::new("ak".to_string(), "sk".to_string());
-        let s = JdcloudSigner::new(c, "service_name".to_string(), "cn-north-1".to_string());
+        let s = Signer::new(c, "service_name".to_string(), "cn-north-1".to_string());
         assert_eq!(s.make_credential_scope("20180101"), "20180101/cn-north-1/service_name/jdcloud2_request");
     }
 
     #[test]
     fn test_make_string_to_sign() {
         let c = Credential::new("ak".to_string(), "sk".to_string());
-        let s = JdcloudSigner::new(c, "service_name".to_string(), "cn-north-1".to_string());
+        let s = Signer::new(c, "service_name".to_string(), "cn-north-1".to_string());
         let req = make_test_request();
         let now = chrono::Utc.ymd(2018, 4, 5).and_hms(01, 02, 03);
         assert_eq!(s.make_string_to_sign(&req, &now).0,

@@ -1,5 +1,5 @@
-mod jdcloud_signer;
+mod signer;
 mod credential;
 
-pub use jdcloud_signer::JdcloudSigner;
+pub use signer::Signer;
 pub use credential::Credential;
