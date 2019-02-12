@@ -4,6 +4,9 @@ version = "0.1.0"
 authors = ["LI Daobing <lidaobing@jd.com>"]
 edition = "2018"
 
+[lib]
+name = "jdcloud_signer"
+
 [dependencies]
 http = "0.1.15"
 rust-crypto = "^0.2"

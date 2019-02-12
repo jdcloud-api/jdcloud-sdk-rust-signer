@@ -8,7 +8,7 @@ use hyper::rt::{self, Future, Stream};
 use hyper::Body;
 use std::env;
 
-use jdcloud_sdk_rust_signer::{Credential, Signer};
+use jdcloud_signer::{Credential, Signer};
 use http::Request;
 
 
