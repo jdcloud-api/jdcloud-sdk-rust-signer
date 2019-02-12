@@ -8,12 +8,14 @@ use crypto::sha2::Sha256;
 use crypto::digest::Digest;
 use crypto::hmac::Hmac;
 use crypto::mac::Mac;
-use crate::credential::Credential;
 use http::Request;
 use http::header::HeaderValue;
 use chrono::prelude::*;
 use uuid::Uuid;
 use url::percent_encoding::{utf8_percent_encode, EncodeSet};
+
+use crate::credential::Credential;
+use crate::error::Error;
 
 static EMPTY_STRING_SHA256: &str = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
 static SHORT_DATE_FORMAT_STR: &str = "%Y%m%d";
@@ -39,9 +41,9 @@ impl Signer {
         }
     }
 
-    pub fn sign_request(&self, request: &mut Request<String>) -> bool {
+    pub fn sign_request(&self, request: &mut Request<String>) -> Result<bool, Error> {
         if !self.credential.is_valid() {
-            panic!("invalid credential");
+            return Err(Error::new_invalid_credential())
         }
 
         let now: DateTime<Utc> = Utc::now();
@@ -49,12 +51,12 @@ impl Signer {
         self.sign_request_2(request, &now, &uuid)
     }
 
-    fn sign_request_2(&self, request: &mut Request<String>, now: &DateTime<Utc>, uuid: &str) -> bool {
+    fn sign_request_2(&self, request: &mut Request<String>, now: &DateTime<Utc>, uuid: &str) -> Result<bool, Error> {
         self.fill_request_with_uuid(request, now, uuid);
         let authorization = self.make_authorization(&request, now);
         request.headers_mut()
             .insert("Authorization", HeaderValue::from_str(&authorization).unwrap());
-        true
+        Ok(true)
     }
 
     fn make_authorization(&self, request: &Request<String>, now: &DateTime<Utc>) -> String {
@@ -266,7 +268,7 @@ mod tests {
         let s = Signer::new(c, "service_name".to_string(), "cn-north-1".to_string());
         let mut req = make_test_request();
         let res = s.sign_request(&mut req);
-        assert!(res);
+        assert!(res.unwrap());
         assert_eq!(get_headers_from_request(&req),
             ["authorization", "content-type", "user-agent", "x-jdcloud-date", "x-jdcloud-nonce"]);
     }
@@ -279,7 +281,7 @@ mod tests {
         let now = chrono::Utc.ymd(2018, 4, 5).and_hms(01, 02, 03);
         let uuid = "55f3919e-3a7d-4174-b117-f150ff25e274";
         let res = s.sign_request_2(&mut req, &now, &uuid);
-        assert!(res);
+        assert!(res.unwrap());
         assert_eq!(get_headers_from_request(&req),
             ["authorization", "content-type", "user-agent", "x-jdcloud-date", "x-jdcloud-nonce"]);
         assert_eq!(req.headers().get("authorization").unwrap(),
