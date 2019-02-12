@@ -4,7 +4,7 @@ extern crate hyper;
 // extern crate futures;
 
 use hyper::Client;
-use hyper::rt::{self, Future};
+use hyper::rt::{self, Future, Stream};
 use hyper::Body;
 use std::env;
 
@@ -44,17 +44,21 @@ fn fetch_req(req: &http::Request<String>) -> impl Future<Item=(), Error=()> {
             header.1.clone()
         );
     }
-    client
+    let res = client
         .request(req2)
-        .map(|res| {
-            assert_eq!(res.status(), 200);
-            println!("Headers: \n{:?}", res.headers());
-            // let body = try_ready!(res.body().poll());
-            // println!("Error: {:?}", body);
-        })
-        .map_err(|err| {
-            println!("Error: {}", err);
-        })
+        .map_err(|_| {
+            panic!("should not error");
+        });
+    let body = res.and_then(|res2: hyper::Response<hyper::Body>| {
+        assert_eq!(res2.status(), 200);
+        let body = res2.into_body();
+        body.into_future()
+    });
+    body.map(|res| {
+        println!("Body: \n{:?}", res.0.unwrap());
+    }).map_err(|_|{
+        panic!("should not error");
+    })
 }
 
 // type Error = Box<dyn std::error::Error>;
