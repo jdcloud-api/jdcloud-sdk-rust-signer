@@ -1,6 +1,9 @@
 language: rust
 rust:
-  - stable
-  - beta
-  - nightly
+- stable
+- beta
+- nightly
 cache: cargo
+env:
+  global:
+    secure: p7bQAe+e56VpdLzcgTxEHlFOh5gm+rJjg7V8EDbUJFMASxFoiFfYUgYobBwL/Cdrgw+eArsd+QWH2YXNT04CS2uUnLCwCabvDJVpOZMW+DOeizYXxTw3XI/M4olwDAX0jSPm4YLh1hjuZoQSaGX5nVu9yIn/6YKr1VqitbL8QR+WT+NoAUhyrjcEbqd/lhXASyG34WfGT5u/vTw2NIapccbrp45nzUCZC6UBEHGd2u5lnlU0SSG8B0XGj6qM4NYBUF+JQnD5twCYV/AEySuG5p8LDZy+gbzytIwBS1+jHEGLaKI6W2ZKu7po3ovDawH9RpKNk46lHvMkbdTnRyWN88ccFpb3C/gqT3Whz305QRyYLB7ZGsjPOtyVhPWWPTjTTpxYBS/A742WN4P1CDzYboo5g1jaNzY5suzdj7TTTS8DxmDhwTyNFLfd055OHacSvCXZSrApLAeCYLcWQkpBee6OMSFE3ucIUPTRDUpIMdnjQNVE2Y3Gyb67ByYwp50srJUtPsMYEcbjsRPBoMjQrkevFri0r/MfrhAGhCKKZ1S+teMXPc6q+lNxmyw/++YVIV3SyYXxene8jsKGDk/I9LZNiVClAH58LYz1n9MBVKjfIZPcncFMxRgmA9eN33851y6DdcUifRLoNHzuoUq3E4oZSo7FJdnwkua8dj9BJQE=
