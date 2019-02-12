@@ -114,19 +114,16 @@ impl Signer {
 }
 
 fn make_cananical_request_str(request: &Request<String>) -> (String, String) {
-    let mut res: String = "".to_owned();
-    res.push_str(request.method().as_str());
-    res.push('\n');
-    res.push_str(request.uri().path());
-    res.push('\n');
-    res.push_str(&make_cananical_query_str(request));
-    res.push('\n');
     let (headers, signed_headers) = make_cananical_header_str_and_signed_headers(request);
-    res.push_str(&headers);
-    res.push('\n');
-    res.push_str(&signed_headers);
-    res.push('\n');
-    res.push_str(&compute_payload_hash(request));
+
+    let res = format!("{}\n{}\n{}\n{}\n{}\n{}",
+        request.method().as_str(),
+        request.uri().path(),
+        &make_cananical_query_str(request),
+        &headers,
+        &signed_headers,
+        &compute_payload_hash(request)
+    );
     (res, signed_headers)
 }
 
