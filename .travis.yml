@@ -4,6 +4,7 @@ rust:
 - beta
 - nightly
 script:
+  - env
   - cargo build --verbose
   - cargo test --verbose -- --nocapture
 cache: cargo
