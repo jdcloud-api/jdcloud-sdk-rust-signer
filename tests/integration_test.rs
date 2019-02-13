@@ -57,7 +57,7 @@ fn fetch_req(req: &http::Request<String>) -> impl Future<Item=(), Error=()> {
         });
     let chunks = res.and_then(|res2| {
         assert_eq!(res2.status(), 200);
-        res2.into_body().collect()
+        res2.into_body().concat2()
     });
     chunks.map(|chunks| {
         println!("Body: \n{:?}", chunks);
