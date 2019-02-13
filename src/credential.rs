@@ -4,10 +4,12 @@ pub struct Credential {
 }
 
 impl Credential {
-    pub fn new(ak: String, sk: String) -> Credential {
+    pub fn new<S>(ak: S, sk: S) -> Credential
+        where S: Into<String>
+    {
         Credential {
-            ak,
-            sk
+            ak: ak.into(),
+            sk: sk.into()
         }
     }
 
@@ -33,10 +35,12 @@ mod tests {
         let ak = "1";
         let sk = "2";
         let _c = Credential::new(ak.to_string(), sk.to_string());
+        let _c = Credential::new(ak, sk);
     }
 
     #[test]
     fn test_is_valid() {
+        assert!(Credential::new("a", "b").is_valid());
         assert!(Credential::new("a".to_string(), "b".to_string()).is_valid());
         assert!(!Credential::new("a".to_string(), "".to_string()).is_valid());
         assert!(!Credential::new("".to_string(), "b".to_string()).is_valid());

@@ -33,11 +33,13 @@ pub struct Signer {
 }
 
 impl Signer {
-    pub fn new(credential: Credential, service_name: String, region: String) -> Signer {
+    pub fn new<S>(credential: Credential, service_name: S, region: S) -> Signer
+        where S: Into<String>
+    {
         Signer {
             credential,
-            service_name,
-            region
+            service_name: service_name.into(),
+            region: region.into()
         }
     }
 
@@ -258,8 +260,8 @@ mod tests {
 
     #[test]
     fn test_sign_request() {
-        let c = Credential::new("ak".to_string(), "sk".to_string());
-        let s = Signer::new(c, "service_name".to_string(), "cn-north-1".to_string());
+        let c = Credential::new("ak", "sk");
+        let s = Signer::new(c, "service_name", "cn-north-1");
         let mut req = make_test_request();
         let res = s.sign_request(&mut req);
         assert!(res.unwrap());
@@ -269,8 +271,8 @@ mod tests {
 
     #[test]
     fn test_sign_request_2() {
-        let c = Credential::new("ak".to_string(), "sk".to_string());
-        let s = Signer::new(c, "service_name".to_string(), "cn-north-1".to_string());
+        let c = Credential::new("ak", "sk");
+        let s = Signer::new(c, "service_name", "cn-north-1");
         let mut req = make_test_request();
         let now = chrono::Utc.ymd(2018, 4, 5).and_hms(01, 02, 03);
         let uuid = "55f3919e-3a7d-4174-b117-f150ff25e274";
