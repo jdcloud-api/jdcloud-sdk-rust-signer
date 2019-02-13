@@ -16,11 +16,17 @@ use http::Request;
 fn test_vm() {
     let ak = match env::var("JDCLOUD_AK") {
         Ok(val) => val,
-        Err(_e) => return
+        Err(_e) => {
+            println!("no JDCLOUD_AK env, ignore test");
+            return
+        }
     };
     let sk = match env::var("JDCLOUD_SK") {
         Ok(val) => val,
-        Err(_e) => return
+        Err(_e) => {
+            println!("no JDCLOUD_SK env, ignore test");
+            return
+        }
     };
     let credential = Credential::new(ak, sk);
     let signer = Signer::new(credential, "vm".to_string(), "cn-north-1".to_string());
@@ -49,13 +55,12 @@ fn fetch_req(req: &http::Request<String>) -> impl Future<Item=(), Error=()> {
         .map_err(|_| {
             panic!("should not error");
         });
-    let body = res.and_then(|res2: hyper::Response<hyper::Body>| {
+    let chunks = res.and_then(|res2| {
         assert_eq!(res2.status(), 200);
-        let body = res2.into_body();
-        body.into_future()
+        res2.into_body().collect()
     });
-    body.map(|res| {
-        println!("Body: \n{:?}", res.0.unwrap());
+    chunks.map(|chunks| {
+        println!("Body: \n{:?}", chunks);
     }).map_err(|_|{
         panic!("should not error");
     })
