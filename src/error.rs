@@ -1,7 +1,7 @@
 use std::error::Error as StdError;
 use std::fmt;
 
-type Cause = Box<StdError + Send + Sync>;
+type Cause = Box<dyn StdError + Send + Sync>;
 
 #[derive(Debug)]
 pub struct Error {
@@ -45,8 +45,8 @@ impl StdError for Error {
         }
     }
 
-    fn cause(&self) -> Option<&StdError> {
-        self.inner.cause.as_ref().map(|cause| &**cause as &StdError)
+    fn cause(&self) -> Option<&dyn StdError> {
+        self.inner.cause.as_ref().map(|cause| &**cause as &dyn StdError)
     }
 }
 

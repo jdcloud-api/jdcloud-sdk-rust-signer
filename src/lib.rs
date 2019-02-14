@@ -1,3 +1,5 @@
+#![deny(bare_trait_objects)]
+
 mod signer;
 mod credential;
 mod error;
