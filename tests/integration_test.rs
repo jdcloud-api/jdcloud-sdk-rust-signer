@@ -43,6 +43,7 @@ fn test_vm() {
     let text = res.text().unwrap();
     let json: Value = serde_json::from_str(&text).unwrap();
     assert!(json["requestId"].is_string());
+    println!("requestId: {}", json["requestId"]);
 }
 
 fn into_reqwest_request(req: Request<String>) -> reqwest::Request {
