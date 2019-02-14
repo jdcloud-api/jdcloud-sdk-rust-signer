@@ -1,10 +1,10 @@
 use std::env;
 
-use jdcloud_signer::{Credential, Signer};
+use jdcloud_signer::{Credential, Signer, Client};
 use http::Request;
 use serde_json::Value;
 #[cfg(feature="reqwest")]
-use reqwest::{self, Client, header::HeaderValue};
+use reqwest::header::HeaderValue;
 
 #[cfg(feature="reqwest")]
 #[test]
@@ -24,7 +24,7 @@ fn test_vm() {
         }
     };
     let credential = Credential::new(ak, sk);
-    let signer = Signer::new(credential, "vm".to_string(), "cn-north-1".to_string());
+    let signer = Signer::new(credential, "vm", "cn-north-1");
 
     let mut req = Request::builder();
     let mut req = req.method("GET")
@@ -33,9 +33,9 @@ fn test_vm() {
     assert!(signer.sign_request(&mut req).unwrap());
     println!("{:?}", req);
 
-    let req = into_reqwest_request(req);
     let client = Client::new();
     let mut res = client.execute(req).unwrap();
+
     assert_eq!(res.status(), 200);
     for header in res.headers().into_iter() {
         println!("{}: {:?}", header.0, header.1);
@@ -46,15 +46,4 @@ fn test_vm() {
     let json: Value = serde_json::from_str(&text).unwrap();
     assert!(json["requestId"].is_string());
     println!("requestId: {}", json["requestId"]);
-}
-
-#[cfg(feature="reqwest")]
-fn into_reqwest_request(req: Request<String>) -> reqwest::Request {
-    let method = req.method().clone();
-    let uri = format!("{}", req.uri());
-    let mut res = reqwest::Request::new(method, url::Url::parse(&uri).unwrap());
-    for header in req.headers().into_iter() {
-        res.headers_mut().insert(header.0, header.1.clone());
-    }
-    res
 }
