@@ -1,11 +1,9 @@
-use hyper::Client;
-use hyper::rt::{self, Future, Stream};
-use hyper::Body;
 use std::env;
 
 use jdcloud_signer::{Credential, Signer};
 use http::Request;
-
+use reqwest::{self, Client, header::HeaderValue};
+use serde_json::{Result, Value};
 
 #[test]
 fn test_vm() {
@@ -32,41 +30,27 @@ fn test_vm() {
         .body("".to_string()).unwrap();
     assert!(signer.sign_request(&mut req).unwrap());
     println!("{:?}", req);
-    rt::run(fetch_req(&req));
-}
 
-fn fetch_req(req: &http::Request<String>) -> impl Future<Item=(), Error=()> {
+    let req = into_reqwest_request(req);
     let client = Client::new();
-    let mut req2 = Request::new(Body::empty());
-    *req2.uri_mut() = req.uri().clone();
-    for header in req.headers().into_iter() {
-        req2.headers_mut().insert(
-            header.0,
-            header.1.clone()
-        );
+    let mut res = client.execute(req).unwrap();
+    assert_eq!(res.status(), 200);
+    for header in res.headers().into_iter() {
+        println!("{}: {:?}", header.0, header.1);
     }
-    let res = client
-        .request(req2)
-        .map_err(|_| {
-            panic!("should not error");
-        });
-    let chunks = res.and_then(|res2| {
-        assert_eq!(res2.status(), 200);
-        res2.into_body().concat2()
-    });
-    chunks.map(|chunks| {
-        println!("Body: \n{:?}", chunks);
-    }).map_err(|_|{
-        panic!("should not error");
-    })
+    assert_eq!(res.headers().get("content-type"),
+        Some(&HeaderValue::from_str("application/json; charset=utf-8").unwrap()));
+    let text = res.text().unwrap();
+    let json: Value = serde_json::from_str(&text).unwrap();
+    assert!(json["requestId"].is_string());
 }
 
-// type Error = Box<dyn std::error::Error>;
-
-// fn example(body: &hyper::Body) -> impl Future<Item = String, Error = Error> {
-//     body.map_err(Error::from)
-//         .concat2()
-//         .and_then(|c| {
-//             str::from_utf8(&c).map(str::to_owned).map_err(Error::from)
-//         })
-// }
+fn into_reqwest_request(req: Request<String>) -> reqwest::Request {
+    let method = req.method().clone();
+    let uri = format!("{}", req.uri());
+    let mut res = reqwest::Request::new(method, url::Url::parse(&uri).unwrap());
+    for header in req.headers().into_iter() {
+        res.headers_mut().insert(header.0, header.1.clone());
+    }
+    res
+}
