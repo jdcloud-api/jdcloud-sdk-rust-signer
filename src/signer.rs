@@ -1,9 +1,3 @@
-extern crate http;
-extern crate crypto;
-extern crate chrono;
-extern crate uuid;
-extern crate url;
-
 use crypto::sha2::Sha256;
 use crypto::digest::Digest;
 use crypto::hmac::Hmac;

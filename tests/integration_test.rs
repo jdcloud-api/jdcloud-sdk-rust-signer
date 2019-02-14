@@ -1,8 +1,3 @@
-extern crate hyper;
-
-// #[macro_use]
-// extern crate futures;
-
 use hyper::Client;
 use hyper::rt::{self, Future, Stream};
 use hyper::Body;
