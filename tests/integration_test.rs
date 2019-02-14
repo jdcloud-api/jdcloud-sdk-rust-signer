@@ -2,9 +2,11 @@ use std::env;
 
 use jdcloud_signer::{Credential, Signer};
 use http::Request;
-use reqwest::{self, Client, header::HeaderValue};
 use serde_json::Value;
+#[cfg(feature="reqwest")]
+use reqwest::{self, Client, header::HeaderValue};
 
+#[cfg(feature="reqwest")]
 #[test]
 fn test_vm() {
     let ak = match env::var("JDCLOUD_AK") {
@@ -46,6 +48,7 @@ fn test_vm() {
     println!("requestId: {}", json["requestId"]);
 }
 
+#[cfg(feature="reqwest")]
 fn into_reqwest_request(req: Request<String>) -> reqwest::Request {
     let method = req.method().clone();
     let uri = format!("{}", req.uri());
