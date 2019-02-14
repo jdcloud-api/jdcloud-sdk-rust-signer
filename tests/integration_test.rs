@@ -3,7 +3,7 @@ use std::env;
 use jdcloud_signer::{Credential, Signer};
 use http::Request;
 use reqwest::{self, Client, header::HeaderValue};
-use serde_json::{Result, Value};
+use serde_json::Value;
 
 #[test]
 fn test_vm() {
