@@ -14,6 +14,10 @@ jdcloud_signer = "0.1"
 ## 使用范例
 
 ```rust
+use jdcloud_signer::{Credential, Signer, Client};
+use http::Request;
+use serde_json::Value;
+
 fn test_vm() {
     let ak = "...";
     let sk = "...";
