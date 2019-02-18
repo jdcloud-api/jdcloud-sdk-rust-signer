@@ -29,10 +29,6 @@ impl Error {
         }
     }
 
-    pub(crate) fn kind(&self) -> &Kind {
-        &self.inner.kind
-    }
-
     pub(crate) fn new_invalid_credential() -> Error {
         Error::new(Kind::InvalidCredential, None)
     }

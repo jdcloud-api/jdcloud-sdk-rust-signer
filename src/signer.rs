@@ -3,7 +3,7 @@ use crypto::digest::Digest;
 use crypto::hmac::Hmac;
 use crypto::mac::Mac;
 use http::Request;
-use http::header::HeaderValue;
+use http::header::{HeaderValue, USER_AGENT};
 use chrono::prelude::*;
 use uuid::Uuid;
 use url::percent_encoding::{utf8_percent_encode, EncodeSet};
@@ -19,6 +19,7 @@ static NONCE_HEADER: &str = "x-jdcloud-nonce";
 static HMAC_SHA256: &str = "JDCLOUD2-HMAC-SHA256";
 static JDCLOUD_REQUEST: &str = "jdcloud2_request";
 static SIGNING_KEY: &str = "JDCLOUD2";
+static DEFAULT_USER_AGENT: &str = "JdcloudSdkRust/0.1.0";
 
 pub struct Signer {
     credential: Credential,
@@ -60,6 +61,9 @@ impl Signer {
         let headers = request.headers_mut();
         headers.insert(DATE_HEADER, HeaderValue::from_str(&request_date_time).unwrap());
         headers.insert(NONCE_HEADER, HeaderValue::from_str(uuid).unwrap());
+        if headers.get(USER_AGENT).is_none() {
+            headers.insert(USER_AGENT, HeaderValue::from_str(DEFAULT_USER_AGENT).unwrap());
+        }
     }
 
     fn make_authorization(&self, request: &Request<String>, now: &DateTime<Utc>) -> String {
@@ -250,7 +254,7 @@ fn base16(data: &[u8]) -> String{
 #[cfg(test)]
 mod tests {
     use super::*;
-    use http::header::{CONTENT_TYPE, USER_AGENT};
+    use http::header::CONTENT_TYPE;
 
     #[test]
     fn test_sign_request() {
@@ -279,11 +283,25 @@ mod tests {
         assert_eq!(req.headers().get("content-type").unwrap(),
             "application/json");
         assert_eq!(req.headers().get("user-agent").unwrap(),
-            "JdcloudSdkRust/0.0.1 vm/0.7.4");
+            DEFAULT_USER_AGENT);
         assert_eq!(req.headers().get("x-jdcloud-date").unwrap(),
             "20180405T010203Z");
         assert_eq!(req.headers().get("x-jdcloud-nonce").unwrap(),
             "55f3919e-3a7d-4174-b117-f150ff25e274");
+    }
+
+    #[test]
+    fn test_sign_request_dont_override_useragent() {
+        let c = Credential::new("ak", "sk");
+        let s = Signer::new(c, "service_name", "cn-north-1");
+        let mut req = make_test_request();
+        req.headers_mut().insert(USER_AGENT, HeaderValue::from_str("myapp/0.0.1").unwrap());
+        let now = chrono::Utc.ymd(2018, 4, 5).and_hms(01, 02, 03);
+        let uuid = "55f3919e-3a7d-4174-b117-f150ff25e274";
+        let res = s.sign_request_2(&mut req, &now, &uuid);
+        assert!(res.unwrap());
+        assert_eq!(req.headers().get("user-agent").unwrap(),
+            "myapp/0.0.1");
     }
 
     #[test]
@@ -309,7 +327,6 @@ mod tests {
         req.uri("http://www.jdcloud-api.com/v1/regions/cn-north-1/instances?pageNumber=2&pageSize=10")
             .method("GET")
             .header(CONTENT_TYPE, "application/json")
-            .header(USER_AGENT, "JdcloudSdkRust/0.0.1 vm/0.7.4")
             .body("".to_string())
             .unwrap()
     }

@@ -1,3 +1,16 @@
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+**Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
+
+- [Usage: 普通方式](#usage-%E6%99%AE%E9%80%9A%E6%96%B9%E5%BC%8F)
+  - [Cargo.toml](#cargotoml)
+  - [使用范例](#%E4%BD%BF%E7%94%A8%E8%8C%83%E4%BE%8B)
+- [Usage: 只签名方式](#usage-%E5%8F%AA%E7%AD%BE%E5%90%8D%E6%96%B9%E5%BC%8F)
+  - [Cargo.toml](#cargotoml-1)
+  - [使用范例](#%E4%BD%BF%E7%94%A8%E8%8C%83%E4%BE%8B-1)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 [![Build Status](https://travis-ci.org/jdcloud-api/jdcloud-sdk-rust-signer.svg?branch=master)](https://travis-ci.org/jdcloud-api/jdcloud-sdk-rust-signer)
 
 # Usage: 普通方式
@@ -47,6 +60,12 @@ fn main() {
 
 如果你不喜欢 `reqwest`, 准备使用自己的http库，那么可以选择只做签名。
 
+签名时我们会添加如下几个 Header 字段
+
+* `User-Agent`: 如果未指定，那么设为 "JdcloudSdkRust/0.1.0", 如果已指定，则不做改动。
+* `X-Jdcloud-Date`: 当前时间。
+* `X-Jdcloud-Nonce`: 随机数。
+* `Authorization`: 签名。
 
 ## Cargo.toml
 
