@@ -272,7 +272,7 @@ mod tests {
         let c = Credential::new("ak", "sk");
         let s = Signer::new(c, "service_name", "cn-north-1");
         let mut req = make_test_request();
-        let now = chrono::Utc.ymd(2018, 4, 5).and_hms(01, 02, 03);
+        let now = chrono::Utc.ymd(2018, 4, 5).and_hms(1, 2, 3);
         let uuid = "55f3919e-3a7d-4174-b117-f150ff25e274";
         let res = s.sign_request_2(&mut req, &now, &uuid);
         assert!(res.unwrap());
@@ -296,7 +296,7 @@ mod tests {
         let s = Signer::new(c, "service_name", "cn-north-1");
         let mut req = make_test_request();
         req.headers_mut().insert(USER_AGENT, HeaderValue::from_str("myapp/0.0.1").unwrap());
-        let now = chrono::Utc.ymd(2018, 4, 5).and_hms(01, 02, 03);
+        let now = chrono::Utc.ymd(2018, 4, 5).and_hms(1, 2, 3);
         let uuid = "55f3919e-3a7d-4174-b117-f150ff25e274";
         let res = s.sign_request_2(&mut req, &now, &uuid);
         assert!(res.unwrap());
@@ -308,14 +308,14 @@ mod tests {
     fn test_make_signing_key() {
         let c = Credential::new("ak".to_string(), "sk".to_string());
         let s = Signer::new(c, "service_name".to_string(), "cn-north-1".to_string());
-        let now = chrono::Utc.ymd(2018, 4, 5).and_hms(01, 02, 03);
+        let now = chrono::Utc.ymd(2018, 4, 5).and_hms(1, 2, 3);
         assert_eq!(base16(&s.make_signing_key(&now)), "b302aa05734bcaf60be65a4be7c971669ac55444769681c19113d80460e31a33");
     }
 
 
     #[test]
     fn test_hmac_sha1() {
-        let a = hmac_sha256("AWS4wJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEY".as_bytes(), "20150830");
+        let a = hmac_sha256(b"AWS4wJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEY", "20150830");
         let a = hmac_sha256(&a, "us-east-1");
         let a = hmac_sha256(&a, "iam");
         let a = hmac_sha256(&a, "aws4_request");
@@ -344,7 +344,7 @@ mod tests {
         let c = Credential::new("ak".to_string(), "sk".to_string());
         let s = Signer::new(c, "service_name".to_string(), "cn-north-1".to_string());
         let req = make_test_request();
-        let now = chrono::Utc.ymd(2018, 4, 5).and_hms(01, 02, 03);
+        let now = chrono::Utc.ymd(2018, 4, 5).and_hms(1, 2, 3);
         assert_eq!(s.make_string_to_sign(&req, &now).0,
             "JDCLOUD2-HMAC-SHA256\n20180405T010203Z\n20180405/cn-north-1/service_name/jdcloud2_request\ncc696ca02602531bc35d4271dec6399149115f8632a7fa828e8d9e969967a03a");
     }
