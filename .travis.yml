@@ -3,8 +3,10 @@ rust:
 - stable
 - beta
 - nightly
+before_script:
+  - rustup component add clippy
 script:
-- env
+- cargo clippy --all-targets --all-features -- -D warnings
 - cargo build --verbose
 - cargo test --verbose -- --nocapture
 cache: cargo
