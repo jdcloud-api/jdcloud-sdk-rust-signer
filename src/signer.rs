@@ -229,19 +229,19 @@ struct Aws4QueryItemEncodeSet;
 impl EncodeSet for Aws4QueryItemEncodeSet {
     #[inline]
     fn contains(&self, c: u8) -> bool {
-        !(('A' as u8 <= c && c <= 'Z' as u8)
-            || ('a' as u8 <= c && c <= 'z' as u8)
-            || ('0' as u8 <= c && c <= '9' as u8)
-            || c == '-' as u8
-            || c == '_' as u8
-            || c == '.' as u8
-            || c == '~' as u8)
+        !((b'A' <= c && c <= b'Z')
+            || (b'a' <= c && c <= b'z')
+            || (b'0' <= c && c <= b'9')
+            || c == b'-'
+            || c == b'_'
+            || c == b'.'
+            || c == b'~')
     }
 }
 
 fn base16(data: &[u8]) -> String{
     let mut res = "".to_owned();
-    let a = "0123456789abcdef".as_bytes();
+    let a = b"0123456789abcdef";
     for c in data {
         let b1 = c/16;
         let b2 = c%16;
