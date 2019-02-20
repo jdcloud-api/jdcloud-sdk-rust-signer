@@ -1,6 +1,7 @@
 use http;
 use reqwest::{self, Response, Error};
 
+#[derive(Default)]
 pub struct Client {
 }
 
