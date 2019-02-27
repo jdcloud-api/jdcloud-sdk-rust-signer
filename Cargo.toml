@@ -1,5 +1,5 @@
 [package]
-name = "jdcloud-sdk-rust-signer"
+name = "jdcloud_signer"
 description = "jdcloud.com API signer"
 version = "0.1.0"
 authors = ["LI Daobing <lidaobing@jd.com>"]
