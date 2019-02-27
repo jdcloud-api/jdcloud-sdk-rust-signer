@@ -22,3 +22,6 @@ serde_json = "1.0"
 
 [features]
 default = ["reqwest"]
+
+[badges]
+travis-ci = { repository = "jdcloud-api/jdcloud-sdk-rust-signer", branch = "master" }
