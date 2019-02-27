@@ -1,3 +1,7 @@
+# jdcloud_signer: jdcloud.com API signer
+
+[![Build Status](https://travis-ci.org/jdcloud-api/jdcloud-sdk-rust-signer.svg?branch=master)](https://travis-ci.org/jdcloud-api/jdcloud-sdk-rust-signer)
+
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 **Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
@@ -11,11 +15,10 @@
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
-[![Build Status](https://travis-ci.org/jdcloud-api/jdcloud-sdk-rust-signer.svg?branch=master)](https://travis-ci.org/jdcloud-api/jdcloud-sdk-rust-signer)
 
-# Usage: 普通方式
+## Usage: 普通方式
 
-## Cargo.toml
+### Cargo.toml
 
 添加如下一段到你的 Cargo.toml
 
@@ -24,7 +27,7 @@
 jdcloud_signer = "0.1"
 ```
 
-## 使用范例
+### 使用范例
 
 ```rust
 use jdcloud_signer::{Credential, Signer, Client};
@@ -56,7 +59,7 @@ fn main() {
 }
 ```
 
-# Usage: 只签名方式
+## Usage: 只签名方式
 
 如果你不喜欢 `reqwest`, 准备使用自己的http库，那么可以选择只做签名。
 
@@ -67,7 +70,7 @@ fn main() {
 * `X-Jdcloud-Nonce`: 随机数。
 * `Authorization`: 签名。
 
-## Cargo.toml
+### Cargo.toml
 
 添加如下一段到你的 Cargo.toml
 
@@ -76,7 +79,7 @@ fn main() {
 jdcloud_signer = { version = "0.1", default-features = false }
 ```
 
-## 使用范例
+### 使用范例
 
 ```rust
 use jdcloud_signer::{Credential, Signer};
@@ -96,4 +99,3 @@ fn main() {
     println!("{}", req);
 }
 ```
-
