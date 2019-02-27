@@ -1,6 +1,9 @@
 # jdcloud_signer: jdcloud.com API signer
 
 [![Build Status](https://travis-ci.org/jdcloud-api/jdcloud-sdk-rust-signer.svg?branch=master)](https://travis-ci.org/jdcloud-api/jdcloud-sdk-rust-signer)
+[![MIT licensed](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0.html)
+[![crates.io](https://meritbadge.herokuapp.com/jdcloud_signer)](https://crates.io/crates/jdcloud_signer)
+[![Released API docs](https://docs.rs/jdcloud_signer/badge.svg)](https://docs.rs/jdcloud_signer)
 
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
