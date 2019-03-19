@@ -98,31 +98,31 @@ impl Signer {
     fn make_string_to_sign(&self, request: &Request<String>, now: &DateTime<Utc>) -> (String, String) {
         let request_date_time = now.format(LONG_DATE_FORMAT_STR).to_string();
 
-        let (cananical_request, signed_headers) = make_cananical_request_str(request);
+        let (canonical_request, signed_headers) = make_canonical_request_str(request);
         let mut hasher = Sha256::new();
-        hasher.input_str(&cananical_request);
-        let cananical_request = hasher.result_str();
+        hasher.input_str(&canonical_request);
+        let canonical_request = hasher.result_str();
 
         let string_to_sign = format!("{}\n{}\n{}\n{}",
             HMAC_SHA256,
             &request_date_time,
             self.make_credential_scope(now),
-            &cananical_request
+            &canonical_request
             );
         (string_to_sign, signed_headers)
     }
 }
 
-fn make_cananical_request_str(request: &Request<String>) -> (String, String) {
-    let (headers, signed_headers) = make_cananical_header_str_and_signed_headers(request);
+fn make_canonical_request_str(request: &Request<String>) -> (String, String) {
+    let (headers, signed_headers) = make_canonical_header_str_and_signed_headers(request);
 
     let res = format!("{}\n{}\n{}\n{}\n{}\n{}",
-        request.method().as_str(),
-        request.uri().path(),
-        &make_cananical_query_str(request),
-        &headers,
-        &signed_headers,
-        &compute_payload_hash(request)
+                      request.method().as_str(),
+                      request.uri().path(),
+                      &make_canonical_query_str(request),
+                      &headers,
+                      &signed_headers,
+                      &compute_payload_hash(request)
     );
     (res, signed_headers)
 }
@@ -138,7 +138,7 @@ fn compute_payload_hash(request: &Request<String>) -> String {
 }
 
 
-fn make_cananical_header_str_and_signed_headers(request: &Request<String>) -> (String, String) {
+fn make_canonical_header_str_and_signed_headers(request: &Request<String>) -> (String, String) {
     let mut header_names = Vec::new();
     for header_name in request.headers().into_iter() {
         header_names.push(header_name);
@@ -183,7 +183,7 @@ fn trim_all(s: &str) -> String {
     res
 }
 
-fn make_cananical_query_str(request: &Request<String>) -> String {
+fn make_canonical_query_str(request: &Request<String>) -> String {
     let query = request.uri().query();
     let query = match query {
         None => "",
@@ -360,36 +360,36 @@ mod tests {
 
 
     #[test]
-    fn test_make_cananical_request_str() {
+    fn test_make_canonical_request_str() {
         let req = Request::builder().method("GET").body("".to_string()).unwrap();
-        assert_eq!(make_cananical_request_str(&req).0, ["GET\n/\n\n\n\n",EMPTY_STRING_SHA256].concat());
+        assert_eq!(make_canonical_request_str(&req).0, ["GET\n/\n\n\n\n",EMPTY_STRING_SHA256].concat());
         let req = Request::builder().method("POST").body("".to_string()).unwrap();
-        assert_eq!(make_cananical_request_str(&req).0, ["POST\n/\n\n\n\n",EMPTY_STRING_SHA256].concat());
+        assert_eq!(make_canonical_request_str(&req).0, ["POST\n/\n\n\n\n",EMPTY_STRING_SHA256].concat());
         let req = Request::builder().method("GET").uri("/helloworld").body("".to_string()).unwrap();
-        assert_eq!(make_cananical_request_str(&req).0, ["GET\n/helloworld\n\n\n\n",EMPTY_STRING_SHA256].concat());
+        assert_eq!(make_canonical_request_str(&req).0, ["GET\n/helloworld\n\n\n\n",EMPTY_STRING_SHA256].concat());
         let req = Request::builder().method("GET").uri("/hello%20world").body("".to_string()).unwrap();
-        assert_eq!(make_cananical_request_str(&req).0, ["GET\n/hello%20world\n\n\n\n",EMPTY_STRING_SHA256].concat());
+        assert_eq!(make_canonical_request_str(&req).0, ["GET\n/hello%20world\n\n\n\n",EMPTY_STRING_SHA256].concat());
         let req = Request::builder().method("GET").uri("/Hello%20world").body("".to_string()).unwrap();
-        assert_eq!(make_cananical_request_str(&req).0, ["GET\n/Hello%20world\n\n\n\n",EMPTY_STRING_SHA256].concat());
+        assert_eq!(make_canonical_request_str(&req).0, ["GET\n/Hello%20world\n\n\n\n",EMPTY_STRING_SHA256].concat());
         let req = Request::builder().method("GET").uri("/Hello%20world?").body("".to_string()).unwrap();
-        assert_eq!(make_cananical_request_str(&req).0, ["GET\n/Hello%20world\n\n\n\n",EMPTY_STRING_SHA256].concat());
+        assert_eq!(make_canonical_request_str(&req).0, ["GET\n/Hello%20world\n\n\n\n",EMPTY_STRING_SHA256].concat());
         let req = Request::builder().method("GET").uri("/Hello%20world?a=1").body("".to_string()).unwrap();
-        assert_eq!(make_cananical_request_str(&req).0, ["GET\n/Hello%20world\na=1\n\n\n",EMPTY_STRING_SHA256].concat());
+        assert_eq!(make_canonical_request_str(&req).0, ["GET\n/Hello%20world\na=1\n\n\n",EMPTY_STRING_SHA256].concat());
         let req = Request::builder().method("GET").uri("/Hello%20world?a=1").header("A", "B").body("".to_string()).unwrap();
-        assert_eq!(make_cananical_request_str(&req).0, ["GET\n/Hello%20world\na=1\na:B\n\na\n",EMPTY_STRING_SHA256].concat());
+        assert_eq!(make_canonical_request_str(&req).0, ["GET\n/Hello%20world\na=1\na:B\n\na\n",EMPTY_STRING_SHA256].concat());
         let req = Request::builder().method("GET").uri("/Hello%20world?a=1").header("A", "B").body("a".to_string()).unwrap();
-        assert_eq!(make_cananical_request_str(&req).0,
-            ["GET\n/Hello%20world\na=1\na:B\n\na\n","ca978112ca1bbdcafac231b39a23dc4da786eff8147c4e72b9807785afee48bb"].concat());
+        assert_eq!(make_canonical_request_str(&req).0,
+                   ["GET\n/Hello%20world\na=1\na:B\n\na\n","ca978112ca1bbdcafac231b39a23dc4da786eff8147c4e72b9807785afee48bb"].concat());
     }
 
-    fn make_cananical_header_str(request: &Request<String>) -> String {
-       make_cananical_header_str_and_signed_headers(&request).0
+    fn make_canonical_header_str(request: &Request<String>) -> String {
+       make_canonical_header_str_and_signed_headers(&request).0
     }
 
     #[test]
-    fn test_make_cananical_header_str() {
+    fn test_make_canonical_header_str() {
         let req = Request::builder().method("GET").body("".to_string()).unwrap();
-        assert_eq!(make_cananical_header_str(&req), "");
+        assert_eq!(make_canonical_header_str(&req), "");
 
         let single_header_tcs = vec![
             ("Hello", "World", "hello:World\n"),
@@ -409,7 +409,7 @@ mod tests {
             let req = Request::builder().method("GET")
                 .header(tc.0, tc.1)
                 .body("".to_string()).unwrap();
-            assert_eq!(make_cananical_header_str(&req), tc.2);
+            assert_eq!(make_canonical_header_str(&req), tc.2);
         }
 
         let multi_header_cases = vec![
@@ -425,18 +425,18 @@ mod tests {
                 req.header(x.0, x.1);
             }
             let req = req.body("".to_string()).unwrap();
-            assert_eq!(make_cananical_header_str(&req), tc.1);
+            assert_eq!(make_canonical_header_str(&req), tc.1);
         }
     }
 
-    fn make_cananical_signed_headers(request: &Request<String>) -> String {
-       make_cananical_header_str_and_signed_headers(&request).1
+    fn make_canonical_signed_headers(request: &Request<String>) -> String {
+       make_canonical_header_str_and_signed_headers(&request).1
     }
 
     #[test]
-    fn test_make_cananical_signed_headers() {
+    fn test_make_canonical_signed_headers() {
         let req = Request::builder().method("GET").body("".to_string()).unwrap();
-        assert_eq!(make_cananical_signed_headers(&req), "");
+        assert_eq!(make_canonical_signed_headers(&req), "");
 
         let testcases = vec![
             (vec!["a"], "a"),
@@ -452,14 +452,14 @@ mod tests {
                 req.header(x, "a");
             }
             let req = req.body("".to_string()).unwrap();
-            assert_eq!(make_cananical_signed_headers(&req), tc.1);
+            assert_eq!(make_canonical_signed_headers(&req), tc.1);
         }
     }
 
     #[test]
-    fn test_make_cananical_query_str() {
+    fn test_make_canonical_query_str() {
         let req = Request::builder().method("GET").body("".to_string()).unwrap();
-        assert_eq!(make_cananical_query_str(&req), "");
+        assert_eq!(make_canonical_query_str(&req), "");
         let testcases = vec![
             ("/", ""),
             ("/?", ""),
@@ -490,7 +490,7 @@ mod tests {
         ];
         for tc in testcases {
             let req = Request::builder().method("GET").uri(tc.0).body("".to_string()).unwrap();
-            assert_eq!(make_cananical_query_str(&req), tc.1);
+            assert_eq!(make_canonical_query_str(&req), tc.1);
         }
     }
 }
