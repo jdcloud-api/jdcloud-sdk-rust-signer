@@ -324,7 +324,7 @@ mod tests {
 
     fn make_test_request() -> Request<String> {
         let mut req = Request::builder();
-        req.uri("http://www.jdcloud-api.com/v1/regions/cn-north-1/instances?pageNumber=2&pageSize=10")
+        req.uri("https://www.jdcloud-api.com/v1/regions/cn-north-1/instances?pageNumber=2&pageSize=10")
             .method("GET")
             .header(CONTENT_TYPE, "application/json")
             .body("".to_string())

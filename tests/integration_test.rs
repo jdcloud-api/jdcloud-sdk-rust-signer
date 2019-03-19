@@ -28,7 +28,7 @@ fn test_vm() {
 
     let mut req = Request::builder();
     let mut req = req.method("GET")
-        .uri("http://vm.jdcloud-api.com/v1/regions/cn-north-1/instances")
+        .uri("https://vm.jdcloud-api.com/v1/regions/cn-north-1/instances")
         .body("".to_string()).unwrap();
     assert!(signer.sign_request(&mut req).unwrap());
     println!("{:?}", req);
