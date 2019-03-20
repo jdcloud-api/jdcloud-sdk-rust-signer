@@ -2,13 +2,37 @@ language: rust
 rust:
 - stable
 - beta
+cache: cargo
 before_script:
   - rustup component add clippy
 script:
 - cargo clippy --all-targets --all-features -- -D warnings
 - cargo build --verbose
 - cargo test --verbose -- --nocapture
-cache: cargo
+addons:
+  apt:
+    packages:
+      - libcurl4-openssl-dev
+      - libelf-dev
+      - libdw-dev
+      - cmake
+      - gcc
+      - binutils-dev
+      - libiberty-dev
+after_success: |
+  wget https://github.com/SimonKagstrom/kcov/archive/master.tar.gz &&
+  tar xzf master.tar.gz &&
+  cd kcov-master &&
+  mkdir build &&
+  cd build &&
+  cmake .. &&
+  make &&
+  make install DESTDIR=../../kcov-build &&
+  cd ../.. &&
+  rm -rf kcov-master &&
+  for file in target/debug/*-*; do [ -x "${file}" ] || continue; mkdir -p "target/cov/$(basename $file)"; ./kcov-build/usr/local/bin/kcov --exclude-pattern=/.cargo,/usr/lib --verify "target/cov/$(basename $file)" "$file"; done &&
+  bash <(curl -s https://codecov.io/bash) &&
+  echo "Uploaded code coverage"
 env:
   global:
   - secure: SifSPfZ8khbIAWILckuDnx2916LiKM/2d+j17urYL2FJU/b9Rd9Eyz/0sQ46VBXNG+lqcimWdPgB57kBOToXLh0NRhnR++wyKKQJMLpAFFA5CCwQGQoYGIc9phhBPRCKXdGhBzh/fkEvl0SAOWnMatvbSzGtQiyoVDyoqPb43ZUbLmHbsch2+6ibR/XvrBaEu0TgAE+oNzpIloR8TIShxWJ6chhvS2jK6IkQrVGdAvRZTVSqOpmrp6+gusKZXfEk6C0G7zfFNyXphDqOfP261PzkUAx0iCWUFxLMMn3LE4+8n/rp94uXvlTIlK+VOnlHlLYTXCnbt/zZ26VgQ4v7QYQsocqf7HkVLASTgS5h85a+JweXOMe4dysc1rPyU7Jr1LjCPijDxv3JNjcuw+dMDU08Eyb4poMwHKXMn4CVeda3N1lX39PGgsD/t3+pMDxWwVx7u4iGzVhUyA3ONVm8sGpTGo3PvqQ8sFF9yAyH12Ei6hYZjGE6EkfeRbXTggUsttoeP6Pgv+eATZUmdQBvX2p1KlVFRfMO1S6i0j0//DiVoQQKVmXF/yGDDqTNWQglVZEoW41bwR+8ux02sNNNwhulemV3IGXEIphrY8Wt5fQM37Ii2XglZQSCzkVhUooAOTji/0xUVFoinCnYJAuVplpiYevE6bSYA1l+3IFMdjw=
