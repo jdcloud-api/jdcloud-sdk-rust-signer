@@ -1,9 +1,10 @@
 use jdcloud_signer::{Credential, Signer};
 use http::Request;
+use std::env;
 
 fn main() {
-    let ak = "...";
-    let sk = "...";
+    let ak = env::var("JDCLOUD_AK").unwrap();
+    let sk = env::var("JDCLOUD_SK").unwrap();
     let credential = Credential::new(ak, sk);
     let signer = Signer::new(credential, "vm".to_string(), "cn-north-1".to_string());
 
