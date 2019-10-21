@@ -94,3 +94,5 @@ fn main() {
     println!("{}", req);
 }
 ```
+
+更多调用示例参考  [SDK使用Demo](https://github.com/jdcloud-api/jdcloud-sdk-rust-signer/tree/master/examples)
