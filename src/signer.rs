@@ -6,7 +6,7 @@ use http::Request;
 use http::header::{HeaderValue, USER_AGENT};
 use chrono::prelude::*;
 use uuid::Uuid;
-use url::percent_encoding::{utf8_percent_encode, EncodeSet};
+use percent_encoding::{utf8_percent_encode, AsciiSet,CONTROLS};
 
 use crate::credential::Credential;
 use crate::error::Error;
@@ -183,6 +183,9 @@ fn trim_all(s: &str) -> String {
     res
 }
 
+const AWS4_QUERY_ITEM_ENCODE_SET: &AsciiSet = &CONTROLS.add(b'-').
+    add(b'_').add(b'.').add(b'~');
+
 fn make_canonical_query_str(request: &Request<String>) -> String {
     let query = request.uri().query();
     let query = match query {
@@ -208,9 +211,9 @@ fn make_canonical_query_str(request: &Request<String>) -> String {
             res.push('&');
         }
         first = false;
-        res.push_str(&utf8_percent_encode(&x.0, Aws4QueryItemEncodeSet).to_string());
+        res.push_str(&utf8_percent_encode(&x.0, AWS4_QUERY_ITEM_ENCODE_SET).to_string());
         res.push('=');
-        res.push_str(&utf8_percent_encode(&x.1, Aws4QueryItemEncodeSet).to_string());
+        res.push_str(&utf8_percent_encode(&x.1, AWS4_QUERY_ITEM_ENCODE_SET).to_string());
     }
     res
 }
@@ -223,21 +226,21 @@ fn hmac_sha256(key: &[u8], data: &str) -> Vec<u8> {
     code.to_vec()
 }
 
-#[derive(Copy, Clone, Debug)]
-struct Aws4QueryItemEncodeSet;
-
-impl EncodeSet for Aws4QueryItemEncodeSet {
-    #[inline]
-    fn contains(&self, c: u8) -> bool {
-        !((b'A' <= c && c <= b'Z')
-            || (b'a' <= c && c <= b'z')
-            || (b'0' <= c && c <= b'9')
-            || c == b'-'
-            || c == b'_'
-            || c == b'.'
-            || c == b'~')
-    }
-}
+// #[derive(Copy, Clone, Debug)]
+// struct Aws4QueryItemEncodeSet;
+//
+// impl EncodeSet for Aws4QueryItemEncodeSet {
+//     #[inline]
+//     fn contains(&self, c: u8) -> bool {
+//         !((b'A' <= c && c <= b'Z')
+//             || (b'a' <= c && c <= b'z')
+//             || (b'0' <= c && c <= b'9')
+//             || c == b'-'
+//             || c == b'_'
+//             || c == b'.'
+//             || c == b'~')
+//     }
+// }
 
 fn base16(data: &[u8]) -> String{
     let mut res = "".to_owned();
@@ -419,12 +422,12 @@ mod tests {
             (vec![("B", "B"), ("A", "A")], "a:A\nb:B\n"),
         ];
         for tc in multi_header_cases {
-            let mut req = Request::builder();
-            req.method("GET");
+            let mut req_builder = Request::builder();
+            req_builder = req_builder.method("GET");
             for x in tc.0 {
-                req.header(x.0, x.1);
+                req_builder =  req_builder.header(x.0, x.1);
             }
-            let req = req.body("".to_string()).unwrap();
+            let req = req_builder.body("".to_string()).unwrap();
             assert_eq!(make_canonical_header_str(&req), tc.1);
         }
     }
@@ -446,12 +449,12 @@ mod tests {
             (vec!["A", "a"], "a;a"),
         ];
         for tc in testcases {
-            let mut req = Request::builder();
-            req.method("GET");
+            let mut req_builder = Request::builder();
+            req_builder =   req_builder.method("GET");
             for x in tc.0 {
-                req.header(x, "a");
+                req_builder =  req_builder.header(x, "a");
             }
-            let req = req.body("".to_string()).unwrap();
+            let req = req_builder.body("".to_string()).unwrap();
             assert_eq!(make_canonical_signed_headers(&req), tc.1);
         }
     }
