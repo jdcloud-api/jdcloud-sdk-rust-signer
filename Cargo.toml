@@ -10,7 +10,7 @@ license = "Apache-2.0"
 name = "jdcloud_signer"
 
 [dependencies]
-http = "0.1.15"
+http = "0.1.20"
 rust-crypto = "^0.2"
 chrono = "0.4"
 url = "1.7.2"
